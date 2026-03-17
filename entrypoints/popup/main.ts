@@ -47,6 +47,28 @@ async function boot() {
 
 	loading = false;
 	renderAll();
+
+	// If the popup was opened before background init finished, storage changes
+	// (healthySet, instanceDomain) will arrive after renderAll(). Keep in sync.
+	browser.storage.onChanged.addListener((changes, area) => {
+		if (area !== 'local') return;
+		let dirty = false;
+
+		if (changes.healthySet?.newValue) {
+			prefs.healthySet = changes.healthySet.newValue as string[];
+			dirty = true;
+		}
+		if (changes.instanceDomain?.newValue) {
+			currentDomain = changes.instanceDomain.newValue as string;
+			dirty = true;
+		}
+		if (changes.blacklist?.newValue) {
+			prefs.blacklist = changes.blacklist.newValue as string[];
+			dirty = true;
+		}
+
+		if (dirty) renderAll();
+	});
 }
 
 // ── Persist prefs ─────────────────────────────────────────────────────────────
