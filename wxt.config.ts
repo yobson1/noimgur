@@ -1,35 +1,11 @@
 import { defineConfig } from 'wxt';
-import { fileURLToPath } from 'node:url';
-import { resolve } from 'node:path';
-import { createServer } from 'node:http';
-import { readFile } from 'node:fs/promises';
-import { extname } from 'node:path';
-
-const testsDir = resolve(fileURLToPath(new URL('.', import.meta.url)), 'tests');
-
-async function serveTests(): Promise<string> {
-	const server = createServer(async (req, res) => {
-		const filePath = resolve(testsDir, (req.url ?? '/').replace(/^\//, '') || 'fixture.html');
-		try {
-			const data = await readFile(filePath);
-			res.writeHead(200);
-			res.end(data);
-		} catch {
-			res.writeHead(404);
-			res.end('Not found');
-		}
-	});
-
-	await new Promise<void>((res) => server.listen(0, res));
-	const { port } = server.address() as { port: number };
-	return `http://localhost:${port}/fixture.html`;
-}
-
-const fixtureUrl = await serveTests();
 
 export default defineConfig({
 	webExt: {
-		startUrls: ['https://imgur.com/', fixtureUrl]
+		startUrls: [
+			'https://imgur.com/',
+			'https://steamcommunity.com/sharedfiles/filedetails/?id=2424633574'
+		]
 	},
 	manifest: {
 		name: 'noimgur',

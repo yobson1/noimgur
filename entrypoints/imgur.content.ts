@@ -1,5 +1,5 @@
 import type { StoredState } from '../lib/types';
-import { rewriteUrl } from '../lib/rewrite';
+import { IMGUR_REGEX } from '../lib/constants';
 
 export default defineContentScript({
 	matches: ['*://*.imgur.com/*', '*://imgur.com/*'],
@@ -23,7 +23,7 @@ export default defineContentScript({
 });
 
 function redirect(proxyBase: string): void {
-	const proxied = rewriteUrl(location.href, proxyBase);
+	const proxied = location.href.replace(IMGUR_REGEX, `${proxyBase}/`);
 	if (proxied !== location.href) {
 		location.replace(proxied);
 	}

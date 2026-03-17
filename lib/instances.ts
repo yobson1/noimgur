@@ -61,7 +61,8 @@ export async function applyInstance(instance: RimgoInstance): Promise<void> {
 					regexFilter: IMGUR_REGEX_CAPTURE,
 					resourceTypes: [
 						'main_frame',
-						'sub_frame'
+						'sub_frame',
+						'image'
 					] as Browser.declarativeNetRequest.ResourceType[]
 				}
 			}
