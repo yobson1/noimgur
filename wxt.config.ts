@@ -1,4 +1,23 @@
 import { defineConfig } from 'wxt';
 
-// See https://wxt.dev/api/config.html
-export default defineConfig({});
+export default defineConfig({
+	manifest: {
+		name: 'noimgur',
+		description:
+			'Redirects imgur.com to a rimgo proxy instance for users in regions where imgur is blocked. Distributes load across all public rimgo instances.',
+		version: '1.0.0',
+		permissions: [
+			'declarativeNetRequest',
+			'declarativeNetRequestWithHostAccess',
+			'storage',
+			'alarms'
+		],
+		host_permissions: [
+			'*://*.imgur.com/*',
+			'https://rimgo.codeberg.page/*',
+			// Firefox requires the redirect *target* host to also be in host_permissions.
+			// Since rimgo instances can be on any domain, we need broad access here.
+			'<all_urls>'
+		]
+	}
+});
