@@ -22,7 +22,7 @@ async function boot() {
 			'instanceDomain',
 			'lastUpdated'
 		]) as Promise<StoredState>,
-		browser.storage.local.get(['blacklist', 'privacyOnly']),
+		browser.storage.local.get(['blacklist', 'privacyOnly', 'healthySet']),
 		fetch(API_URL).then((r) => r.json())
 	]);
 
