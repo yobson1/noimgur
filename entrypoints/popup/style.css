@@ -22,6 +22,9 @@
 	--accent-dim: light-dark(#d4f7e0, #1a3d28);
 	--warn: light-dark(#92700a, #facc15);
 	--warn-dim: light-dark(#fef9c3, #3d3010);
+	--danger: light-dark(#dc2626, #f87171);
+	--danger-dim: light-dark(#fee2e2, #3d1010);
+	--danger-border: light-dark(#fca5a5, #3d1010);
 	--font: 'IBM Plex Mono', monospace;
 }
 
@@ -85,33 +88,35 @@ body {
 	border: 1px solid var(--border);
 	color: var(--text-dim);
 	cursor: pointer;
-	padding: 3px 6px;
-	font-family: var(--font);
-	font-size: 10px;
+	padding: 4px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 	border-radius: 3px;
 	transition:
-		color 0.15s,
-		border-color 0.15s;
+		border-color 0.15s,
+		color 0.15s;
+}
+
+.refresh-icon {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.refresh-icon svg {
+	width: 16px;
+	height: 16px;
 }
 
 .refresh-btn:hover {
-	color: var(--accent-border);
 	border-color: var(--accent-border);
+	color: var(--accent-border);
 }
 
 .refresh-btn:disabled {
 	opacity: 0.4;
 	cursor: default;
-}
-
-.refresh-btn.spinning {
-	animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
-	}
 }
 
 /* ── Privacy toggle ── */
@@ -241,9 +246,9 @@ body {
 }
 
 .pill-unhealthy {
-	background: light-dark(#fee2e2, #3d1010);
-	color: light-dark(#dc2626, #f87171);
-	border: 1px solid light-dark(#fca5a5, #3d1010);
+	background: var(--danger-dim);
+	color: var(--danger);
+	border: 1px solid var(--danger-border);
 }
 
 .pill-unprivate {
@@ -404,9 +409,9 @@ body {
 }
 
 .tag-danger {
-	background: light-dark(#fee2e2, #3d1010);
-	color: light-dark(#dc2626, #f87171);
-	border: 1px solid light-dark(#fca5a5, #3d1010);
+	background: var(--danger-dim);
+	color: var(--danger);
+	border: 1px solid var(--danger-border);
 }
 
 .instance-meta {

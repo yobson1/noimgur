@@ -1,6 +1,7 @@
 import './style.css';
 import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
 import { API_URL } from '../../lib/constants';
+import refreshIconUrl from '@/assets/refresh.svg?url';
 
 const app = document.getElementById('app')!;
 
@@ -81,11 +82,8 @@ async function savePrefs() {
 
 async function triggerRotate(btn: HTMLButtonElement) {
 	btn.disabled = true;
-	btn.classList.add('spinning');
-	btn.textContent = '↻';
 	try {
 		await browser.runtime.sendMessage({ type: 'ROTATE_NOW' });
-		// Re-read the newly chosen instance
 		const result = (await browser.storage.local.get([
 			'instanceDomain'
 		])) as Partial<StoredState>;
@@ -94,8 +92,6 @@ async function triggerRotate(btn: HTMLButtonElement) {
 		updateCurrentLabel();
 	} finally {
 		btn.disabled = false;
-		btn.classList.remove('spinning');
-		btn.textContent = '↻';
 	}
 }
 
@@ -108,7 +104,7 @@ function renderShell() {
         <span class="logo">no<span>imgur</span></span>
         <span class="current-instance" id="cur-instance">loading…</span>
       </div>
-      <button class="refresh-btn" id="refresh-btn" title="Pick a new instance now">↻</button>
+      <button class="refresh-btn" id="refresh-btn" title="Pick a new instance now"><span class="refresh-icon"></span></button>
     </div>
 
     <div class="privacy-row">
@@ -137,6 +133,14 @@ function renderShell() {
 	document.getElementById('refresh-btn')!.addEventListener('click', (e) => {
 		triggerRotate(e.currentTarget as HTMLButtonElement);
 	});
+
+	// Inline the SVG so currentColor inherits from CSS
+	fetch(refreshIconUrl)
+		.then((r) => r.text())
+		.then((svg) => {
+			const icon = document.querySelector<HTMLSpanElement>('.refresh-icon');
+			if (icon) icon.innerHTML = svg;
+		});
 
 	document.getElementById('privacy-toggle')!.addEventListener('change', async (e) => {
 		prefs.privacyOnly = (e.currentTarget as HTMLInputElement).checked;
