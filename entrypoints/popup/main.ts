@@ -1,6 +1,6 @@
 import './style.css';
 import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
-import { API_URL, STATE_KEYS, PREFS_KEYS } from '../../lib/constants';
+import { API_URL, STATE_KEYS, PREFS_KEYS, ALARM_NAME } from '../../lib/constants';
 import { isPrivate, collectsData } from '../../lib/utils';
 import { filterInstances } from '../../lib/instances';
 import refreshIconUrl from '@/assets/refresh.svg?url';
@@ -13,6 +13,8 @@ let instances: RimgoInstance[] = [];
 let prefs: StoredPrefs = { blacklist: [], privacyOnly: false, healthySet: [] };
 let currentDomain = '';
 let loading = true;
+let nextAlarmMs = 0;
+let countdownInterval: ReturnType<typeof setInterval> | null = null;
 
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
@@ -47,6 +49,13 @@ async function boot() {
 	loading = false;
 	renderAll();
 
+	// Start countdown to next health check
+	const alarm = await browser.alarms.get(ALARM_NAME);
+	if (alarm) {
+		nextAlarmMs = alarm.scheduledTime;
+		startCountdown();
+	}
+
 	// If the popup was opened before background init finished, storage changes
 	// (healthySet, instanceDomain) will arrive after renderAll(). Keep in sync.
 	browser.storage.onChanged.addListener((changes, area) => {
@@ -74,6 +83,29 @@ async function boot() {
 
 async function savePrefs() {
 	await browser.storage.local.set(prefs);
+}
+
+// ── Countdown ─────────────────────────────────────────────────────────────────
+
+function formatCountdown(ms: number): string {
+	if (ms <= 0) return 'now';
+	const totalSecs = Math.ceil(ms / 1000);
+	const h = Math.floor(totalSecs / 3600);
+	const m = Math.floor((totalSecs % 3600) / 60);
+	const s = totalSecs % 60;
+	if (h > 0) return `${h}h ${m}m`;
+	if (m > 0) return `${m}m ${s}s`;
+	return `${s}s`;
+}
+
+function startCountdown() {
+	if (countdownInterval) clearInterval(countdownInterval);
+	countdownInterval = setInterval(() => {
+		const el = document.getElementById('next-rotation');
+		if (!el) return;
+		const remaining = nextAlarmMs - Date.now();
+		el.textContent = formatCountdown(remaining);
+	}, 1000);
 }
 
 // ── Trigger background rotation ───────────────────────────────────────────────
@@ -119,6 +151,11 @@ function renderShell() {
     <div class="list-header">
       <span class="list-header-text">Instances</span>
       <div class="list-count" id="list-count">—</div>
+    </div>
+
+    <div class="rotation-row">
+      <span class="rotation-label">Next health check &amp; rotation</span>
+      <span class="rotation-countdown" id="next-rotation">—</span>
     </div>
 
     <div class="instance-list" id="instance-list">

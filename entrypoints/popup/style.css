@@ -215,6 +215,27 @@ body {
 	letter-spacing: 0.08em;
 }
 
+/* ── Rotation countdown ── */
+.rotation-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 5px 12px;
+	border-bottom: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.rotation-label {
+	font-size: 10px;
+	color: var(--text-dim);
+}
+
+.rotation-countdown {
+	font-size: 10px;
+	color: var(--text-mid);
+	font-variant-numeric: tabular-nums;
+}
+
 .list-count {
 	display: flex;
 	flex-direction: column;
