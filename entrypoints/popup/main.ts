@@ -143,6 +143,16 @@ function renderShell() {
 		await savePrefs();
 		renderInstanceList();
 		updateCount();
+
+		// If we just turned privacy mode on and the current instance doesn't qualify, rotate
+		if (prefs.privacyOnly) {
+			const current = instances.find((i) => i.domain === currentDomain);
+			const currentIsPrivate = current?.note?.includes('Data not collected') ?? false;
+			if (!currentIsPrivate) {
+				const btn = document.getElementById('refresh-btn') as HTMLButtonElement;
+				await triggerRotate(btn);
+			}
+		}
 	});
 }
 
