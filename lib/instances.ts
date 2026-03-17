@@ -1,5 +1,5 @@
 import type { RimgoApiResponse, RimgoInstance, StoredState, StoredPrefs } from './types';
-import { API_URL, RULE_ID, IMGUR_REGEX_CAPTURE } from './constants';
+import { API_URL, RULE_ID, IMGUR_REGEX_CAPTURE, STATE_KEYS, PREFS_KEYS } from './constants';
 import { isPrivate } from './utils';
 
 export async function fetchInstances(): Promise<RimgoInstance[]> {
@@ -74,7 +74,7 @@ export async function applyInstance(instance: RimgoInstance): Promise<void> {
 }
 
 export async function getStoredPrefs(): Promise<StoredPrefs> {
-	const result = await browser.storage.local.get(['blacklist', 'privacyOnly', 'healthySet']);
+	const result = await browser.storage.local.get([...PREFS_KEYS]);
 	return {
 		blacklist: (result.blacklist as string[]) ?? [],
 		privacyOnly: (result.privacyOnly as boolean) ?? false,
@@ -116,11 +116,7 @@ export async function rotateInstance(): Promise<void> {
 }
 
 export async function getStoredState(): Promise<StoredState | null> {
-	const result: StoredState = await browser.storage.local.get([
-		'proxyBase',
-		'instanceDomain',
-		'lastUpdated'
-	]);
+	const result: StoredState = await browser.storage.local.get([...STATE_KEYS]);
 	if (!result.proxyBase) return null;
 	return result;
 }

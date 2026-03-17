@@ -1,7 +1,8 @@
 import './style.css';
 import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
-import { API_URL } from '../../lib/constants';
+import { API_URL, STATE_KEYS, PREFS_KEYS } from '../../lib/constants';
 import { isPrivate, collectsData } from '../../lib/utils';
+import { filterInstances } from '../../lib/instances';
 import refreshIconUrl from '@/assets/refresh.svg?url';
 
 const app = document.getElementById('app')!;
@@ -19,12 +20,8 @@ async function boot() {
 	renderShell();
 
 	const [stateResult, prefsResult, apiResult] = await Promise.allSettled([
-		browser.storage.local.get([
-			'proxyBase',
-			'instanceDomain',
-			'lastUpdated'
-		]) as Promise<StoredState>,
-		browser.storage.local.get(['blacklist', 'privacyOnly', 'healthySet']),
+		browser.storage.local.get([...STATE_KEYS]) as Promise<StoredState>,
+		browser.storage.local.get([...PREFS_KEYS]),
 		fetch(API_URL).then((r) => r.json())
 	]);
 
@@ -188,12 +185,7 @@ function updateCount() {
 	const unhealthy = prefs.healthySet.length > 0 ? total - prefs.healthySet.length : 0;
 	const blacklisted = prefs.blacklist.length;
 	const unprivate = prefs.privacyOnly ? instances.filter((i) => !isPrivate(i)).length : 0;
-	const active = instances.filter((i) => {
-		if (prefs.healthySet.length > 0 && !prefs.healthySet.includes(i.domain)) return false;
-		if (prefs.blacklist.includes(i.domain)) return false;
-		if (prefs.privacyOnly && !isPrivate(i)) return false;
-		return true;
-	}).length;
+	const active = filterInstances(instances, prefs).length;
 
 	const pills = [
 		unhealthy > 0
