@@ -1,6 +1,7 @@
 import './style.css';
 import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
 import { API_URL } from '../../lib/constants';
+import { isPrivate, collectsData } from '../../lib/utils';
 import refreshIconUrl from '@/assets/refresh.svg?url';
 
 const app = document.getElementById('app')!;
@@ -151,7 +152,7 @@ function renderShell() {
 		// If we just turned privacy mode on and the current instance doesn't qualify, rotate
 		if (prefs.privacyOnly) {
 			const current = instances.find((i) => i.domain === currentDomain);
-			const currentIsPrivate = current?.note?.includes('Data not collected') ?? false;
+			const currentIsPrivate = current ? isPrivate(current) : false;
 			if (!currentIsPrivate) {
 				const btn = document.getElementById('refresh-btn') as HTMLButtonElement;
 				await triggerRotate(btn);
@@ -186,13 +187,11 @@ function updateCount() {
 	const total = instances.length;
 	const unhealthy = prefs.healthySet.length > 0 ? total - prefs.healthySet.length : 0;
 	const blacklisted = prefs.blacklist.length;
-	const unprivate = prefs.privacyOnly
-		? instances.filter((i) => !i.note?.includes('Data not collected')).length
-		: 0;
+	const unprivate = prefs.privacyOnly ? instances.filter((i) => !isPrivate(i)).length : 0;
 	const active = instances.filter((i) => {
 		if (prefs.healthySet.length > 0 && !prefs.healthySet.includes(i.domain)) return false;
 		if (prefs.blacklist.includes(i.domain)) return false;
-		if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
+		if (prefs.privacyOnly && !isPrivate(i)) return false;
 		return true;
 	}).length;
 
@@ -233,8 +232,8 @@ function renderInstanceList() {
 
 	for (const instance of instances) {
 		const isBlacklisted = prefs.blacklist.includes(instance.domain);
-		const isPrivacySafe = instance.note?.includes('Data not collected') ?? false;
-		const isDataCollected = instance.note?.includes('Data collected') ?? false;
+		const isPrivacySafe = isPrivate(instance);
+		const isDataCollected = collectsData(instance);
 		const isCurrent = instance.domain === currentDomain;
 		const isHiddenByPrivacyFilter = prefs.privacyOnly && !isPrivacySafe;
 		// Hide instances that failed the last health check entirely — they're not usable

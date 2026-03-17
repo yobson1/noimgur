@@ -1,5 +1,6 @@
 import type { RimgoApiResponse, RimgoInstance, StoredState, StoredPrefs } from './types';
 import { API_URL, RULE_ID, IMGUR_REGEX_CAPTURE } from './constants';
+import { isPrivate } from './utils';
 
 export async function fetchInstances(): Promise<RimgoInstance[]> {
 	const res = await fetch(API_URL);
@@ -85,7 +86,7 @@ export function filterInstances(instances: RimgoInstance[], prefs: StoredPrefs):
 	return instances.filter((i) => {
 		if (prefs.healthySet.length > 0 && !prefs.healthySet.includes(i.domain)) return false;
 		if (prefs.blacklist.includes(i.domain)) return false;
-		if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
+		if (prefs.privacyOnly && !isPrivate(i)) return false;
 		return true;
 	});
 }
