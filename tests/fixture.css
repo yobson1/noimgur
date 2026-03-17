@@ -1,0 +1,6 @@
+.imgur-bg {
+	width: 200px;
+	height: 200px;
+	background-image: url('https://i.imgur.com/CzXTtJV.jpg');
+	background-size: cover;
+}
