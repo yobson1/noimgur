@@ -10,11 +10,12 @@ export function rewriteUrl(url: string, proxyBase: string): string {
 
 export function rewriteImg(img: HTMLImageElement, proxyBase: string): void {
 	if (isImgurSrc(img.src)) {
-		img.src = rewriteUrl(img.src, proxyBase);
+		const next = rewriteUrl(img.src, proxyBase);
+		if (next !== img.src) img.src = next;
 	}
 
 	if (img.srcset) {
-		img.srcset = img.srcset
+		const next = img.srcset
 			.split(',')
 			.map((entry) => {
 				const [url, descriptor] = entry.trim().split(/\s+/);
@@ -26,6 +27,7 @@ export function rewriteImg(img: HTMLImageElement, proxyBase: string): void {
 				return entry.trim();
 			})
 			.join(', ');
+		if (next !== img.srcset) img.srcset = next;
 	}
 }
 
@@ -34,10 +36,8 @@ export function rewriteImg(img: HTMLImageElement, proxyBase: string): void {
 export function rewriteElementStyle(el: HTMLElement, proxyBase: string): void {
 	const style = el.getAttribute('style');
 	if (style && IMGUR_REGEX.test(style)) {
-		el.setAttribute(
-			'style',
-			style.replace(new RegExp(IMGUR_REGEX.source, 'g'), `${proxyBase}/`)
-		);
+		const next = style.replace(new RegExp(IMGUR_REGEX.source, 'g'), `${proxyBase}/`);
+		if (next !== style) el.setAttribute('style', next);
 	}
 }
 

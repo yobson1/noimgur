@@ -23,6 +23,13 @@ export default defineContentScript({
 });
 
 function init(proxyBase: string): void {
+	const observerConfig: MutationObserverInit = {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeFilter: ['src', 'srcset', 'style']
+	};
+
 	const observer = new MutationObserver((mutations) => {
 		observer.disconnect();
 
@@ -40,19 +47,17 @@ function init(proxyBase: string): void {
 				mutation.target instanceof HTMLImageElement &&
 				(mutation.attributeName === 'src' || mutation.attributeName === 'srcset')
 			) {
-				rewriteImg(mutation.target, proxyBase);
+				const img = mutation.target;
+				// Don't re-process if the new value is already pointing at the proxy
+				const val = mutation.attributeName === 'src' ? img.src : img.srcset;
+				if (!val.includes(proxyBase)) {
+					rewriteImg(img, proxyBase);
+				}
 			}
 		}
 
 		observer.observe(document.documentElement, observerConfig);
 	});
-
-	const observerConfig: MutationObserverInit = {
-		childList: true,
-		subtree: true,
-		attributes: true,
-		attributeFilter: ['src', 'srcset', 'style']
-	};
 
 	if (document.body) {
 		rewriteAll(document, proxyBase);
