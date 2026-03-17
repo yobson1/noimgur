@@ -42,10 +42,13 @@ export default defineBackground(() => {
 		}
 	});
 
-	// Allow the popup to trigger an immediate rotation
-	browser.runtime.onMessage.addListener((msg) => {
+	// Allow the popup to trigger an immediate rotation.
+	// Returning true tells the browser to keep the message channel open
+	// so the async response reaches the popup after rotation completes.
+	browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		if (msg && (msg as { type: string }).type === 'ROTATE_NOW') {
-			rotateInstance();
+			rotateInstance().then(() => sendResponse({ ok: true }));
+			return true; // keeps the channel open for the async sendResponse
 		}
 	});
 
