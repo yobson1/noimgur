@@ -97,7 +97,7 @@ export function filterInstances(instances: RimgoInstance[], prefs: StoredPrefs):
 	});
 }
 
-// Fast rotate — no health checks, trusts the persisted healthySet.
+// trusts the persisted healthySet
 export async function rotateInstance(): Promise<void> {
 	try {
 		const [instances, prefs, state] = await Promise.all([

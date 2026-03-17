@@ -7,47 +7,39 @@ import {
 } from '../lib/instances';
 import { ALARM_NAME, ROTATE_INTERVAL_MINUTES, MAX_STATE_AGE_MS } from '../lib/constants';
 
+async function initAndBroadcast() {
+	const instances = await fetchInstances();
+	await refreshHealthySet(instances);
+	await rotateInstance();
+
+	// Notify all tabs that the proxy is now ready
+	const tabs = await browser.tabs.query({});
+	for (const tab of tabs) {
+		if (tab.id) {
+			browser.tabs.sendMessage(tab.id, { type: 'NOIMGUR_INIT' }).catch(() => {
+				// Tab may not have the content script, ignore
+			});
+		}
+	}
+
+	const existing = await browser.alarms.get(ALARM_NAME);
+	if (!existing) {
+		await browser.alarms.create(ALARM_NAME, {
+			periodInMinutes: ROTATE_INTERVAL_MINUTES
+		});
+	}
+}
+
 export default defineBackground(() => {
 	browser.runtime.onInstalled.addListener(async ({ reason }) => {
 		if (reason === 'install') {
 			console.log('[noimgur] Extension installed, checking instances...');
-			const instances = await fetchInstances();
-			await refreshHealthySet(instances);
-			await rotateInstance();
+			await initAndBroadcast();
 		}
-
-		await browser.alarms.create(ALARM_NAME, {
-			periodInMinutes: ROTATE_INTERVAL_MINUTES
-		});
 	});
 
 	browser.runtime.onStartup.addListener(async () => {
-		const state = await getStoredState();
-		const stale = !state || Date.now() - state.lastUpdated > MAX_STATE_AGE_MS;
-
-		// Always refresh healthy set on startup so we have fresh data
-		const instances = await fetchInstances();
-		await refreshHealthySet(instances);
-
-		if (stale) {
-			console.log('[noimgur] State is stale on startup, rotating instance...');
-			await rotateInstance();
-		} else {
-			// Re-apply the stored instance — dynamic rules don't persist across browser restarts
-			const stored = instances.find((i) => i.domain === state.instanceDomain);
-			if (stored) {
-				await applyInstance(stored);
-			} else {
-				await rotateInstance();
-			}
-		}
-
-		const existing = await browser.alarms.get(ALARM_NAME);
-		if (!existing) {
-			await browser.alarms.create(ALARM_NAME, {
-				periodInMinutes: ROTATE_INTERVAL_MINUTES
-			});
-		}
+		await initAndBroadcast();
 	});
 
 	// Popup requests an immediate rotation (no health check — trusts healthySet)
