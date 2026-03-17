@@ -3,24 +3,25 @@
 	<head>
 		<meta charset="UTF-8" />
 		<title>imgur embed fixture</title>
+		<link rel="stylesheet" href="fixture.css" />
 	</head>
 	<body>
 		<!-- 1. Plain <img src> -->
-		<img id="img-src" src="https://i.imgur.com/abc123.jpg" alt="plain src" />
+		<img id="img-src" src="https://i.imgur.com/CzXTtJV.jpg" alt="plain src" />
 
 		<!-- 2. <img src> — imgur.com (no subdomain) -->
-		<img id="img-src-nodomain" src="https://imgur.com/abc123.jpg" alt="no subdomain" />
+		<img id="img-src-nodomain" src="https://imgur.com/CzXTtJV.jpg" alt="no subdomain" />
 
 		<!-- 3. <img srcset> — single entry -->
-		<img id="img-srcset-single" srcset="https://i.imgur.com/abc123.jpg 1x" alt="srcset single" />
+		<img id="img-srcset-single" srcset="https://i.imgur.com/CzXTtJV.jpg 1x" alt="srcset single" />
 
 		<!-- 4. <img srcset> — multiple entries, mixed imgur and non-imgur -->
 		<img
 			id="img-srcset-multi"
 			srcset="
-				https://i.imgur.com/small.jpg  480w,
-				https://i.imgur.com/large.jpg 1080w,
-				https://example.com/other.jpg 1440w
+				https://i.imgur.com/CzXTtJV.jpg  480w,
+				https://i.imgur.com/OB0y6MR.jpg 1080w,
+				https://example.com/other.jpg   1440w
 			"
 			alt="srcset multi"
 		/>
@@ -28,21 +29,26 @@
 		<!-- 5. <img src> AND <img srcset> together -->
 		<img
 			id="img-src-and-srcset"
-			src="https://i.imgur.com/combo.jpg"
-			srcset="https://i.imgur.com/combo.jpg 1x, https://i.imgur.com/combo@2x.jpg 2x"
+			src="https://i.imgur.com/CzXTtJV.jpg"
+			srcset="https://i.imgur.com/CzXTtJV.jpg 1x, https://i.imgur.com/OB0y6MR.jpg 2x"
 			alt="src and srcset"
 		/>
 
 		<!-- 6. Inline style background-image -->
-		<div id="div-bg-image" style="background-image: url('https://i.imgur.com/bg.jpg')"></div>
+		<div
+			id="div-bg-image"
+			style="background-image: url('https://i.imgur.com/CzXTtJV.jpg'); width: 200px; height: 200px"
+		></div>
 
 		<!-- 7. Inline style with multiple backgrounds -->
 		<div
 			id="div-bg-multi"
 			style="
 				background:
-					url('https://i.imgur.com/layer1.jpg') top,
-					url('https://i.imgur.com/layer2.jpg') bottom;
+					url('https://i.imgur.com/CzXTtJV.jpg') top,
+					url('https://i.imgur.com/OB0y6MR.jpg') bottom;
+				width: 200px;
+				height: 200px;
 			"
 		></div>
 
@@ -55,8 +61,10 @@
 		<!-- 10. Nested imgur image inside a container -->
 		<div id="container-nested">
 			<section>
-				<img id="img-nested" src="https://i.imgur.com/nested.png" alt="nested" />
+				<img id="img-nested" src="https://i.imgur.com/OB0y6MR.jpg" alt="nested" />
 			</section>
 		</div>
+		<!-- 11. Element with imgur background-image via external CSS class -->
+		<div id="div-css-class" class="imgur-bg"></div>
 	</body>
 </html>
