@@ -102,7 +102,7 @@ function renderShell() {
 
     <div class="list-header">
       <span class="list-header-text">Instances</span>
-      <span class="list-count" id="list-count">—</span>
+      <div class="list-count" id="list-count">—</div>
     </div>
 
     <div class="instance-list" id="instance-list">
@@ -146,14 +146,38 @@ function updateCurrentLabel() {
 function updateCount() {
 	const el = document.getElementById('list-count');
 	if (!el) return;
+
 	const total = instances.length;
+	const unhealthy = prefs.healthySet.length > 0 ? total - prefs.healthySet.length : 0;
+	const blacklisted = prefs.blacklist.length;
+	const unprivate = prefs.privacyOnly
+		? instances.filter((i) => !i.note?.includes('Data not collected')).length
+		: 0;
 	const active = instances.filter((i) => {
 		if (prefs.healthySet.length > 0 && !prefs.healthySet.includes(i.domain)) return false;
 		if (prefs.blacklist.includes(i.domain)) return false;
 		if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
 		return true;
 	}).length;
-	el.innerHTML = `<span class="active">${active}</span> / ${total} active`;
+
+	const pills = [
+		unhealthy > 0
+			? `<span class="count-pill pill-unhealthy">${unhealthy} unhealthy</span>`
+			: '',
+		unprivate > 0
+			? `<span class="count-pill pill-unprivate">${unprivate} unprivate</span>`
+			: '',
+		blacklisted > 0
+			? `<span class="count-pill pill-blacklisted">${blacklisted} blacklisted</span>`
+			: ''
+	]
+		.filter(Boolean)
+		.join('');
+
+	el.innerHTML = `
+    <span class="count-active"><span class="active">${active}</span> / ${total} active</span>
+    ${pills ? `<span class="count-pills">${pills}</span>` : ''}
+  `;
 }
 
 function renderInstanceList() {
