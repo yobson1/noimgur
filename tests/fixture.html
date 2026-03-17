@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>imgur embed fixture</title>
+	</head>
+	<body>
+		<!-- 1. Plain <img src> -->
+		<img id="img-src" src="https://i.imgur.com/abc123.jpg" alt="plain src" />
+
+		<!-- 2. <img src> — imgur.com (no subdomain) -->
+		<img id="img-src-nodomain" src="https://imgur.com/abc123.jpg" alt="no subdomain" />
+
+		<!-- 3. <img srcset> — single entry -->
+		<img id="img-srcset-single" srcset="https://i.imgur.com/abc123.jpg 1x" alt="srcset single" />
+
+		<!-- 4. <img srcset> — multiple entries, mixed imgur and non-imgur -->
+		<img
+			id="img-srcset-multi"
+			srcset="
+				https://i.imgur.com/small.jpg  480w,
+				https://i.imgur.com/large.jpg 1080w,
+				https://example.com/other.jpg 1440w
+			"
+			alt="srcset multi"
+		/>
+
+		<!-- 5. <img src> AND <img srcset> together -->
+		<img
+			id="img-src-and-srcset"
+			src="https://i.imgur.com/combo.jpg"
+			srcset="https://i.imgur.com/combo.jpg 1x, https://i.imgur.com/combo@2x.jpg 2x"
+			alt="src and srcset"
+		/>
+
+		<!-- 6. Inline style background-image -->
+		<div id="div-bg-image" style="background-image: url('https://i.imgur.com/bg.jpg')"></div>
+
+		<!-- 7. Inline style with multiple backgrounds -->
+		<div
+			id="div-bg-multi"
+			style="
+				background:
+					url('https://i.imgur.com/layer1.jpg') top,
+					url('https://i.imgur.com/layer2.jpg') bottom;
+			"
+		></div>
+
+		<!-- 8. Inline style with a non-imgur background (should be untouched) -->
+		<div id="div-bg-other" style="background-image: url('https://example.com/safe.jpg')"></div>
+
+		<!-- 9. <img> with a non-imgur src (should be untouched) -->
+		<img id="img-other" src="https://example.com/safe.jpg" alt="non imgur" />
+
+		<!-- 10. Nested imgur image inside a container -->
+		<div id="container-nested">
+			<section>
+				<img id="img-nested" src="https://i.imgur.com/nested.png" alt="nested" />
+			</section>
+		</div>
+	</body>
+</html>

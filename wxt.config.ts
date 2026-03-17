@@ -1,6 +1,13 @@
 import { defineConfig } from 'wxt';
+import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
+
+const fixtureUrl = `file://${resolve(fileURLToPath(new URL('.', import.meta.url)), 'tests/fixture.html')}`;
 
 export default defineConfig({
+	webExt: {
+		startUrls: ['https://imgur.com/', fixtureUrl]
+	},
 	manifest: {
 		name: 'noimgur',
 		description:
