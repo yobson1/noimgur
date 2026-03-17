@@ -42,6 +42,13 @@ export default defineBackground(() => {
 		}
 	});
 
+	// Allow the popup to trigger an immediate rotation
+	browser.runtime.onMessage.addListener((msg) => {
+		if (msg && (msg as { type: string }).type === 'ROTATE_NOW') {
+			rotateInstance();
+		}
+	});
+
 	// Rotate on alarm tick
 	browser.alarms.onAlarm.addListener(async (alarm) => {
 		if (alarm.name === ALARM_NAME) {

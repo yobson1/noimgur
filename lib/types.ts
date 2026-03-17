@@ -22,3 +22,8 @@ export interface StoredState {
 	instanceDomain: string;
 	lastUpdated: number;
 }
+
+export interface StoredPrefs {
+	blacklist: string[]; // domains the user has manually unticked
+	privacyOnly: boolean; // only pick instances where note includes "Data not collected"
+}

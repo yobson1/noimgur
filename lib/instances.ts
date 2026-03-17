@@ -1,4 +1,4 @@
-import type { RimgoApiResponse, RimgoInstance, StoredState } from './types';
+import type { RimgoApiResponse, RimgoInstance, StoredState, StoredPrefs } from './types';
 import { API_URL, RULE_ID, IMGUR_REGEX_CAPTURE } from './constants';
 
 export async function fetchInstances(): Promise<RimgoInstance[]> {
@@ -74,10 +74,33 @@ export async function applyInstance(instance: RimgoInstance): Promise<void> {
 	console.log(`[noimgur] Using instance: ${instance.domain} (${instance.country})`);
 }
 
+export async function getStoredPrefs(): Promise<StoredPrefs> {
+	const result = await browser.storage.local.get(['blacklist', 'privacyOnly']);
+	return {
+		blacklist: (result.blacklist as string[]) ?? [],
+		privacyOnly: (result.privacyOnly as boolean) ?? false
+	};
+}
+
+export function filterInstances(instances: RimgoInstance[], prefs: StoredPrefs): RimgoInstance[] {
+	return instances.filter((i) => {
+		if (prefs.blacklist.includes(i.domain)) return false;
+		if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
+		return true;
+	});
+}
+
 export async function rotateInstance(): Promise<void> {
 	try {
-		const instances = await fetchInstances();
-		const picked = await pickHealthyInstance(instances);
+		const [instances, prefs, state] = await Promise.all([
+			fetchInstances(),
+			getStoredPrefs(),
+			getStoredState()
+		]);
+		const eligible = filterInstances(instances, prefs).filter(
+			(i) => i.domain !== state?.instanceDomain
+		);
+		const picked = await pickHealthyInstance(eligible);
 		if (picked) {
 			await applyInstance(picked);
 		} else {

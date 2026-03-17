@@ -1,24 +1,251 @@
 import './style.css';
-import typescriptLogo from '@/assets/typescript.svg';
-import wxtLogo from '/wxt.svg';
-import { setupCounter } from '@/components/counter';
+import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
+import { API_URL } from '../../lib/constants';
 
-document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
-  <div>
-    <a href="https://wxt.dev" target="_blank">
-      <img src="${wxtLogo}" class="logo" alt="WXT logo" />
-    </a>
-    <a href="https://www.typescriptlang.org/" target="_blank">
-      <img src="${typescriptLogo}" class="logo vanilla" alt="TypeScript logo" />
-    </a>
-    <h1>WXT + TypeScript</h1>
-    <div class="card">
-      <button id="counter" type="button"></button>
+const app = document.getElementById('app')!;
+
+// ── State ────────────────────────────────────────────────────────────────────
+
+let instances: RimgoInstance[] = [];
+let prefs: StoredPrefs = { blacklist: [], privacyOnly: false };
+let currentDomain = '';
+let loading = true;
+
+// ── Boot ─────────────────────────────────────────────────────────────────────
+
+async function boot() {
+	renderShell();
+
+	const [stateResult, prefsResult, apiResult] = await Promise.allSettled([
+		browser.storage.local.get([
+			'proxyBase',
+			'instanceDomain',
+			'lastUpdated'
+		]) as Promise<StoredState>,
+		browser.storage.local.get(['blacklist', 'privacyOnly']),
+		fetch(API_URL).then((r) => r.json())
+	]);
+
+	if (stateResult.status === 'fulfilled' && stateResult.value.instanceDomain) {
+		currentDomain = stateResult.value.instanceDomain;
+	}
+
+	if (prefsResult.status === 'fulfilled') {
+		const p = prefsResult.value as Record<string, unknown>;
+		prefs = {
+			blacklist: (p.blacklist as string[]) ?? [],
+			privacyOnly: (p.privacyOnly as boolean) ?? false
+		};
+	}
+
+	if (apiResult.status === 'fulfilled') {
+		instances = (apiResult.value.clearnet as RimgoInstance[]).filter((i) =>
+			i.url.startsWith('https')
+		);
+	}
+
+	loading = false;
+	renderAll();
+}
+
+// ── Persist prefs ─────────────────────────────────────────────────────────────
+
+async function savePrefs() {
+	await browser.storage.local.set(prefs);
+}
+
+// ── Trigger background rotation ───────────────────────────────────────────────
+
+async function triggerRotate(btn: HTMLButtonElement) {
+	btn.disabled = true;
+	btn.classList.add('spinning');
+	btn.textContent = '↻';
+	try {
+		await browser.runtime.sendMessage({ type: 'ROTATE_NOW' });
+		// Re-read the newly chosen instance
+		const result = (await browser.storage.local.get([
+			'instanceDomain'
+		])) as Partial<StoredState>;
+		if (result.instanceDomain) currentDomain = result.instanceDomain;
+		renderInstanceList();
+		updateCurrentLabel();
+	} finally {
+		btn.disabled = false;
+		btn.classList.remove('spinning');
+		btn.textContent = '↻';
+	}
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+
+function renderShell() {
+	app.innerHTML = `
+    <div class="header">
+      <div class="header-left">
+        <span class="logo">no<span>imgur</span></span>
+        <span class="current-instance" id="cur-instance">loading…</span>
+      </div>
+      <button class="refresh-btn" id="refresh-btn" title="Pick a new instance now">↻</button>
     </div>
-    <p class="read-the-docs">
-      Click on the WXT and TypeScript logos to learn more
-    </p>
-  </div>
-`;
 
-setupCounter(document.querySelector<HTMLButtonElement>('#counter')!);
+    <div class="privacy-row">
+      <div class="privacy-label">
+        <strong>Privacy instances only</strong>
+        <span>Exclude instances that collect data</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="privacy-toggle" />
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="list-header">
+      <span class="list-header-text">Instances</span>
+      <span class="list-count" id="list-count">—</span>
+    </div>
+
+    <div class="instance-list" id="instance-list">
+      <div class="state-msg">
+        fetching<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+      </div>
+    </div>
+  `;
+
+	document.getElementById('refresh-btn')!.addEventListener('click', (e) => {
+		triggerRotate(e.currentTarget as HTMLButtonElement);
+	});
+
+	document.getElementById('privacy-toggle')!.addEventListener('change', async (e) => {
+		prefs.privacyOnly = (e.currentTarget as HTMLInputElement).checked;
+		await savePrefs();
+		renderInstanceList();
+		updateCount();
+	});
+}
+
+function renderAll() {
+	// Privacy toggle state
+	(document.getElementById('privacy-toggle') as HTMLInputElement).checked = prefs.privacyOnly;
+
+	updateCurrentLabel();
+	renderInstanceList();
+	updateCount();
+}
+
+function updateCurrentLabel() {
+	const el = document.getElementById('cur-instance')!;
+	if (currentDomain) {
+		el.textContent = currentDomain;
+		el.classList.add('loaded');
+	} else {
+		el.textContent = 'no instance set';
+	}
+}
+
+function updateCount() {
+	const el = document.getElementById('list-count');
+	if (!el) return;
+	const total = instances.length;
+	const active = instances
+		.filter((i) => !prefs.blacklist.includes(i.domain))
+		.filter((i) => {
+			if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
+			return true;
+		}).length;
+	el.innerHTML = `<span class="active">${active}</span> / ${total} active`;
+}
+
+function renderInstanceList() {
+	const container = document.getElementById('instance-list')!;
+
+	if (loading) {
+		container.innerHTML = `<div class="state-msg">fetching<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></div>`;
+		return;
+	}
+
+	if (instances.length === 0) {
+		container.innerHTML = `<div class="state-msg">could not load instance list</div>`;
+		return;
+	}
+
+	container.innerHTML = '';
+
+	for (const instance of instances) {
+		const isBlacklisted = prefs.blacklist.includes(instance.domain);
+		const isPrivacySafe = instance.note?.includes('Data not collected') ?? false;
+		const isDataCollected = instance.note?.includes('Data collected') ?? false;
+		const isCurrent = instance.domain === currentDomain;
+		const isHiddenByPrivacyFilter = prefs.privacyOnly && !isPrivacySafe;
+
+		const row = document.createElement('div');
+		row.className = [
+			'instance-row',
+			isCurrent ? 'active-row' : '',
+			isBlacklisted ? 'disabled-row' : '',
+			isHiddenByPrivacyFilter ? 'hidden-row' : ''
+		]
+			.filter(Boolean)
+			.join(' ');
+
+		// Note: strip leading emoji/whitespace for display
+		const noteDisplay = instance.note
+			? instance.note.replace(/^[\u{1F300}-\u{1FAFF}\u26A0\uFE0F⚠️✅❌\s]+/gu, '').trim()
+			: null;
+
+		row.innerHTML = `
+      <div class="cb-wrap">
+        <input
+          type="checkbox"
+          ${!isBlacklisted ? 'checked' : ''}
+          aria-label="Enable ${instance.domain}"
+          data-domain="${instance.domain}"
+        />
+      </div>
+      <div class="instance-info">
+        <div class="instance-domain">
+          <a href="${instance.url}" target="_blank" rel="noopener">${instance.domain}</a>
+          ${isCurrent ? '<span class="tag tag-current">active</span>' : ''}
+          ${
+				isPrivacySafe
+					? '<span class="tag tag-privacy">no data</span>'
+					: isDataCollected
+						? '<span class="tag tag-danger">data</span>'
+						: '<span class="tag tag-warn">data?</span>'
+			}
+        </div>
+        <div class="instance-meta">${instance.country} · ${instance.provider}</div>
+        ${noteDisplay ? `<div class="instance-note">${noteDisplay}</div>` : ''}
+      </div>
+    `;
+
+		const checkbox = row.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+		checkbox.addEventListener('change', async (e) => {
+			const domain = (e.currentTarget as HTMLInputElement).dataset.domain!;
+			const checked = (e.currentTarget as HTMLInputElement).checked;
+
+			if (checked) {
+				prefs.blacklist = prefs.blacklist.filter((d) => d !== domain);
+			} else {
+				if (!prefs.blacklist.includes(domain)) prefs.blacklist.push(domain);
+			}
+
+			await savePrefs();
+			// Update row appearance without full re-render to avoid scroll jump
+			row.classList.toggle('disabled-row', !checked);
+			updateCount();
+		});
+
+		// Clicking the row (not just the checkbox) toggles it too
+		row.addEventListener('click', (e) => {
+			if ((e.target as HTMLElement).tagName === 'A') return; // let link open
+			if ((e.target as HTMLElement).tagName === 'INPUT') return; // checkbox handles itself
+			checkbox.click();
+		});
+
+		container.appendChild(row);
+	}
+
+	updateCount();
+}
+
+boot();
