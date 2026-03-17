@@ -3,6 +3,8 @@
 [![GitHub License](https://img.shields.io/github/license/yobson1/noimgur)](https://github.com/yobson1/noimgur/blob/main/LICENSE)
 [![WXT Badge](https://img.shields.io/badge/built_with-WXT-67D55E?logo=wxt&link=https%3A%2F%2Fwxt.dev%2F)](https://wxt.dev)
 
+automatically redirect imgur images with a [rimgo](https://codeberg.org/rimgo/rimgo) instance
+
 ## Developing
 
 This project uses [pnpm](https://pnpm.io/):
