@@ -32,7 +32,7 @@ function isImgurSrc(src: string): boolean {
 }
 
 function rewriteSrc(src: string, proxyBase: string): string {
-	return src.replace(IMGUR_REGEX, proxyBase);
+	return src.replace(IMGUR_REGEX, `${proxyBase}/`);
 }
 
 function rewriteImg(img: HTMLImageElement, proxyBase: string): void {
@@ -63,6 +63,41 @@ function rewriteAll(root: Document | Element, proxyBase: string): void {
 }
 
 function init(proxyBase: string): void {
+	const observer = new MutationObserver((mutations) => {
+		// Disconnect before making any DOM changes to prevent our own
+		// src assignments from re-triggering this observer infinitely.
+		observer.disconnect();
+
+		for (const mutation of mutations) {
+			for (const node of mutation.addedNodes) {
+				if (node instanceof HTMLImageElement) {
+					rewriteImg(node, proxyBase);
+				} else if (node instanceof Element) {
+					rewriteAll(node, proxyBase);
+				}
+			}
+
+			// Handle src/srcset attribute changes on existing images (e.g. SPA lazy loaders)
+			if (
+				mutation.type === 'attributes' &&
+				mutation.target instanceof HTMLImageElement &&
+				(mutation.attributeName === 'src' || mutation.attributeName === 'srcset')
+			) {
+				rewriteImg(mutation.target, proxyBase);
+			}
+		}
+
+		// Reconnect after all mutations in this batch are processed.
+		observer.observe(document.documentElement, observerConfig);
+	});
+
+	const observerConfig: MutationObserverInit = {
+		childList: true,
+		subtree: true,
+		attributes: true,
+		attributeFilter: ['src', 'srcset']
+	};
+
 	// Rewrite anything already in the DOM
 	if (document.body) {
 		rewriteAll(document, proxyBase);
@@ -73,32 +108,5 @@ function init(proxyBase: string): void {
 		});
 	}
 
-	// Watch for dynamically added content (SPA navigation, lazy loading, infinite scroll)
-	const observer = new MutationObserver((mutations) => {
-		for (const mutation of mutations) {
-			for (const node of mutation.addedNodes) {
-				if (node instanceof HTMLImageElement) {
-					rewriteImg(node, proxyBase);
-				} else if (node instanceof Element) {
-					rewriteAll(node, proxyBase);
-				}
-			}
-
-			// Also handle src attribute changes on existing images
-			if (
-				mutation.type === 'attributes' &&
-				mutation.target instanceof HTMLImageElement &&
-				(mutation.attributeName === 'src' || mutation.attributeName === 'srcset')
-			) {
-				rewriteImg(mutation.target, proxyBase);
-			}
-		}
-	});
-
-	observer.observe(document.documentElement, {
-		childList: true,
-		subtree: true,
-		attributes: true,
-		attributeFilter: ['src', 'srcset']
-	});
+	observer.observe(document.documentElement, observerConfig);
 }
