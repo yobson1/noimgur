@@ -5,13 +5,11 @@ export async function fetchInstances(): Promise<RimgoInstance[]> {
 	const res = await fetch(API_URL);
 	if (!res.ok) throw new Error(`Failed to fetch instances: ${res.status}`);
 	const data: RimgoApiResponse = await res.json();
-	// Only clearnet, only https
 	return data.clearnet.filter((i) => i.url.startsWith('https'));
 }
 
 export async function checkInstanceHealth(instance: RimgoInstance): Promise<boolean> {
 	try {
-		// Ping the instance root with a short timeout
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), 4000);
 		const res = await fetch(instance.url, {
@@ -25,16 +23,17 @@ export async function checkInstanceHealth(instance: RimgoInstance): Promise<bool
 	}
 }
 
-export async function pickHealthyInstance(
-	instances: RimgoInstance[]
-): Promise<RimgoInstance | null> {
-	// Shuffle so we don't hammer the same ones first
-	const shuffled = [...instances].sort(() => Math.random() - 0.5);
-	for (const instance of shuffled) {
-		const healthy = await checkInstanceHealth(instance);
-		if (healthy) return instance;
-	}
-	return null;
+// Check all instances in parallel and persist the passing set to storage.
+// Called on install, startup, and before each periodic alarm rotation.
+export async function refreshHealthySet(instances: RimgoInstance[]): Promise<string[]> {
+	console.log(`[noimgur] Health checking ${instances.length} instances...`);
+	const results = await Promise.all(
+		instances.map(async (i) => ({ domain: i.domain, healthy: await checkInstanceHealth(i) }))
+	);
+	const healthySet = results.filter((r) => r.healthy).map((r) => r.domain);
+	await browser.storage.local.set({ healthySet });
+	console.log(`[noimgur] ${healthySet.length}/${instances.length} instances healthy`);
+	return healthySet;
 }
 
 export async function applyInstance(instance: RimgoInstance): Promise<void> {
@@ -49,7 +48,6 @@ export async function applyInstance(instance: RimgoInstance): Promise<void> {
 				action: {
 					type: 'redirect' as Browser.declarativeNetRequest.RuleActionType,
 					redirect: {
-						// \1 captures everything after imgur.com/ and appends to proxy base
 						regexSubstitution: `${base}/\\1`
 					}
 				},
@@ -75,21 +73,24 @@ export async function applyInstance(instance: RimgoInstance): Promise<void> {
 }
 
 export async function getStoredPrefs(): Promise<StoredPrefs> {
-	const result = await browser.storage.local.get(['blacklist', 'privacyOnly']);
+	const result = await browser.storage.local.get(['blacklist', 'privacyOnly', 'healthySet']);
 	return {
 		blacklist: (result.blacklist as string[]) ?? [],
-		privacyOnly: (result.privacyOnly as boolean) ?? false
+		privacyOnly: (result.privacyOnly as boolean) ?? false,
+		healthySet: (result.healthySet as string[]) ?? []
 	};
 }
 
 export function filterInstances(instances: RimgoInstance[], prefs: StoredPrefs): RimgoInstance[] {
 	return instances.filter((i) => {
+		if (prefs.healthySet.length > 0 && !prefs.healthySet.includes(i.domain)) return false;
 		if (prefs.blacklist.includes(i.domain)) return false;
 		if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
 		return true;
 	});
 }
 
+// Fast rotate — no health checks, trusts the persisted healthySet.
 export async function rotateInstance(): Promise<void> {
 	try {
 		const [instances, prefs, state] = await Promise.all([
@@ -100,12 +101,14 @@ export async function rotateInstance(): Promise<void> {
 		const eligible = filterInstances(instances, prefs).filter(
 			(i) => i.domain !== state?.instanceDomain
 		);
-		const picked = await pickHealthyInstance(eligible);
-		if (picked) {
-			await applyInstance(picked);
-		} else {
-			console.warn('[noimgur] No healthy instances found, keeping current.');
+
+		if (eligible.length === 0) {
+			console.warn('[noimgur] No eligible instances to rotate to.');
+			return;
 		}
+
+		const picked = eligible[Math.floor(Math.random() * eligible.length)];
+		await applyInstance(picked);
 	} catch (err) {
 		console.error('[noimgur] Failed to rotate instance:', err);
 	}

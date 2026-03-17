@@ -7,7 +7,7 @@ const app = document.getElementById('app')!;
 // ── State ────────────────────────────────────────────────────────────────────
 
 let instances: RimgoInstance[] = [];
-let prefs: StoredPrefs = { blacklist: [], privacyOnly: false };
+let prefs: StoredPrefs = { blacklist: [], privacyOnly: false, healthySet: [] };
 let currentDomain = '';
 let loading = true;
 
@@ -34,7 +34,8 @@ async function boot() {
 		const p = prefsResult.value as Record<string, unknown>;
 		prefs = {
 			blacklist: (p.blacklist as string[]) ?? [],
-			privacyOnly: (p.privacyOnly as boolean) ?? false
+			privacyOnly: (p.privacyOnly as boolean) ?? false,
+			healthySet: (p.healthySet as string[]) ?? []
 		};
 	}
 
@@ -146,12 +147,12 @@ function updateCount() {
 	const el = document.getElementById('list-count');
 	if (!el) return;
 	const total = instances.length;
-	const active = instances
-		.filter((i) => !prefs.blacklist.includes(i.domain))
-		.filter((i) => {
-			if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
-			return true;
-		}).length;
+	const active = instances.filter((i) => {
+		if (prefs.healthySet.length > 0 && !prefs.healthySet.includes(i.domain)) return false;
+		if (prefs.blacklist.includes(i.domain)) return false;
+		if (prefs.privacyOnly && !i.note?.includes('Data not collected')) return false;
+		return true;
+	}).length;
 	el.innerHTML = `<span class="active">${active}</span> / ${total} active`;
 }
 
@@ -176,13 +177,16 @@ function renderInstanceList() {
 		const isDataCollected = instance.note?.includes('Data collected') ?? false;
 		const isCurrent = instance.domain === currentDomain;
 		const isHiddenByPrivacyFilter = prefs.privacyOnly && !isPrivacySafe;
+		// Hide instances that failed the last health check entirely — they're not usable
+		const isUnhealthy =
+			prefs.healthySet.length > 0 && !prefs.healthySet.includes(instance.domain);
 
 		const row = document.createElement('div');
 		row.className = [
 			'instance-row',
 			isCurrent ? 'active-row' : '',
 			isBlacklisted ? 'disabled-row' : '',
-			isHiddenByPrivacyFilter ? 'hidden-row' : ''
+			isHiddenByPrivacyFilter || isUnhealthy ? 'hidden-row' : ''
 		]
 			.filter(Boolean)
 			.join(' ');
@@ -230,16 +234,21 @@ function renderInstanceList() {
 			}
 
 			await savePrefs();
-			// Update row appearance without full re-render to avoid scroll jump
 			row.classList.toggle('disabled-row', !checked);
 			updateCount();
 		});
 
-		// Clicking the row (not just the checkbox) toggles it too
-		row.addEventListener('click', (e) => {
-			if ((e.target as HTMLElement).tagName === 'A') return; // let link open
-			if ((e.target as HTMLElement).tagName === 'INPUT') return; // checkbox handles itself
-			checkbox.click();
+		row.addEventListener('click', async (e) => {
+			const target = e.target as HTMLElement;
+			if (target.tagName === 'A') return; // let link open normally
+			if (target.tagName === 'INPUT') return; // checkbox change handler covers this
+
+			// Set this instance as active immediately
+			await browser.runtime.sendMessage({ type: 'SET_INSTANCE', domain: instance.domain });
+			currentDomain = instance.domain;
+			// Re-render list so active-row moves to the new selection
+			renderInstanceList();
+			updateCurrentLabel();
 		});
 
 		container.appendChild(row);

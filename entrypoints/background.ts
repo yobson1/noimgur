@@ -1,30 +1,39 @@
-import { rotateInstance, getStoredState, fetchInstances, applyInstance } from '../lib/instances';
+import {
+	rotateInstance,
+	getStoredState,
+	fetchInstances,
+	applyInstance,
+	refreshHealthySet
+} from '../lib/instances';
 import { ALARM_NAME, ROTATE_INTERVAL_MINUTES, MAX_STATE_AGE_MS } from '../lib/constants';
 
 export default defineBackground(() => {
-	// On first install, fetch and apply an instance immediately
 	browser.runtime.onInstalled.addListener(async ({ reason }) => {
 		if (reason === 'install') {
-			console.log('[noimgur] Extension installed, fetching rimgo instances...');
+			console.log('[noimgur] Extension installed, checking instances...');
+			const instances = await fetchInstances();
+			await refreshHealthySet(instances);
 			await rotateInstance();
 		}
 
-		// Set up the recurring alarm (safe to call on update too — recreates if missing)
 		await browser.alarms.create(ALARM_NAME, {
 			periodInMinutes: ROTATE_INTERVAL_MINUTES
 		});
 	});
 
-	// On browser startup the service worker spins up fresh — check if state is stale
 	browser.runtime.onStartup.addListener(async () => {
 		const state = await getStoredState();
 		const stale = !state || Date.now() - state.lastUpdated > MAX_STATE_AGE_MS;
+
+		// Always refresh healthy set on startup so we have fresh data
+		const instances = await fetchInstances();
+		await refreshHealthySet(instances);
+
 		if (stale) {
 			console.log('[noimgur] State is stale on startup, rotating instance...');
 			await rotateInstance();
 		} else {
 			// Re-apply the stored instance — dynamic rules don't persist across browser restarts
-			const instances = await fetchInstances();
 			const stored = instances.find((i) => i.domain === state.instanceDomain);
 			if (stored) {
 				await applyInstance(stored);
@@ -33,7 +42,6 @@ export default defineBackground(() => {
 			}
 		}
 
-		// Ensure alarm is still registered (can be cleared if the browser cleans up)
 		const existing = await browser.alarms.get(ALARM_NAME);
 		if (!existing) {
 			await browser.alarms.create(ALARM_NAME, {
@@ -42,20 +50,30 @@ export default defineBackground(() => {
 		}
 	});
 
-	// Allow the popup to trigger an immediate rotation.
-	// Returning true tells the browser to keep the message channel open
-	// so the async response reaches the popup after rotation completes.
+	// Popup requests an immediate rotation (no health check — trusts healthySet)
 	browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-		if (msg && (msg as { type: string }).type === 'ROTATE_NOW') {
+		const m = msg as { type: string; domain?: string };
+		if (m.type === 'ROTATE_NOW') {
 			rotateInstance().then(() => sendResponse({ ok: true }));
-			return true; // keeps the channel open for the async sendResponse
+			return true;
+		}
+		if (m.type === 'SET_INSTANCE' && m.domain) {
+			fetchInstances()
+				.then((instances) => {
+					const target = instances.find((i) => i.domain === m.domain);
+					if (target) return applyInstance(target);
+				})
+				.then(() => sendResponse({ ok: true }));
+			return true;
 		}
 	});
 
-	// Rotate on alarm tick
+	// Alarm: re-check health first, then rotate
 	browser.alarms.onAlarm.addListener(async (alarm) => {
 		if (alarm.name === ALARM_NAME) {
-			console.log('[noimgur] Alarm fired, rotating instance...');
+			console.log('[noimgur] Alarm fired, refreshing healthy set then rotating...');
+			const instances = await fetchInstances();
+			await refreshHealthySet(instances);
 			await rotateInstance();
 		}
 	});
