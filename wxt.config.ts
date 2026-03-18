@@ -7,10 +7,12 @@ export default defineConfig({
 			'https://steamcommunity.com/sharedfiles/filedetails/?id=2424633574'
 		]
 	},
+	zip: {
+		excludeSources: ['gen-icons.sh']
+	},
 	manifest: {
 		name: 'noimgur',
-		description:
-			'Redirects imgur.com to a rimgo proxy instance for users in regions where imgur is blocked. Distributes load across all public rimgo instances.',
+		description: 'Redirects imgur.com to rimgo proxy instances for users in blocked regions',
 		version: process.env.npm_package_version,
 		permissions: [
 			'declarativeNetRequest',
