@@ -1,7 +1,7 @@
 import './style.css';
 import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
 import { API_URL, STATE_KEYS, PREFS_KEYS, ALARM_NAME } from '../../lib/constants';
-import { isPrivate, collectsData } from '../../lib/utils';
+import { isPrivate, collectsData, countryFlag } from '../../lib/utils';
 import { filterInstances } from '../../lib/instances';
 import refreshIconUrl from '@/assets/refresh.svg?url';
 
@@ -344,7 +344,7 @@ function renderInstanceList() {
 						: '<span class="tag tag-warn">data?</span>'
 			}
         </div>
-        <div class="instance-meta">${instance.country} · ${instance.provider}</div>
+        <div class="instance-meta">${countryFlag(instance.country)} ${instance.country} · ${instance.provider}</div>
         ${noteDisplay ? `<div class="instance-note">${noteDisplay}</div>` : ''}
       </div>
     `;
