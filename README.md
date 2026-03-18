@@ -37,3 +37,6 @@ The archive will be in the .output directory
 - [![WXT](https://img.shields.io/badge/WXT-67D55E?logo=wxt&logoColor=fff)](https://wxt.dev)
 - [![pnpm](https://img.shields.io/badge/pnpm-F69220?logo=pnpm&logoColor=fff)](https://bun.sh/)
 - [![Iconify](https://img.shields.io/badge/Iconify-026C9C?logo=iconify&logoColor=fff)](https://icon-sets.iconify.design/)
+
+## Notice
+NOT AFFILIATED WITH OR APPROVED BY IMGUR
