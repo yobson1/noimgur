@@ -23,7 +23,15 @@ jobs:
         id: check_version
         run: |
           if git diff --name-only HEAD~1..HEAD | grep -q '^package\.json$'; then
-            VERSION_CHANGED=1
+            NEW_VERSION=$(jq -r .version package.json)
+            LATEST_TAG=$(git tag --sort=-v:refname | head -n1)
+            if [ -z "$LATEST_TAG" ]; then
+              VERSION_CHANGED=1
+            elif [ "v$NEW_VERSION" != "$LATEST_TAG" ]; then
+              VERSION_CHANGED=1
+            else
+              VERSION_CHANGED=0
+            fi
           else
             VERSION_CHANGED=0
           fi
