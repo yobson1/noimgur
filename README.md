@@ -31,6 +31,10 @@ pnpm zip:firefox
 
 The archive will be in the .output directory
 
+## Screenshots
+![Dark mode UI](media/screenshots/noimgur_dark.png)
+![Light mode UI](media/screenshots/noimgur_light.png)
+
 ## Built With
 
 - [![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](https://www.typescriptlang.org/)
