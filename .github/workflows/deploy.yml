@@ -120,3 +120,5 @@ jobs:
             ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip
             ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-firefox.zip
             ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-sources.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
