@@ -24,6 +24,14 @@ let countdownInterval: ReturnType<typeof setInterval> | null = null;
 // ── Boot ─────────────────────────────────────────────────────────────────────
 
 async function boot() {
+	// so that the popup fills the screen when opened from a tab
+	// and more importantly also on firefox mobile
+	const isTab = (await browser.tabs.getCurrent()) !== undefined;
+	const ua = navigator.userAgent;
+	const isMobile = ua.includes('Android');
+	if (isTab || isMobile) {
+		document.documentElement.classList.add('fullscreen');
+	}
 	renderShell();
 
 	const [stateResult, prefsResult, apiResult] = await Promise.allSettled([
