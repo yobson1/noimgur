@@ -15,12 +15,14 @@ export async function checkInstanceHealth(instance: RimgoInstance): Promise<bool
 		const timeout = setTimeout(() => controller.abort(), 4000);
 		const base = instance.url.replace(/\/$/, '');
 		const res = await fetch(`${base}/CzXTtJV.jpg`, {
-			method: 'HEAD',
+			method: 'GET',
 			signal: controller.signal
 		});
 		clearTimeout(timeout);
 		if (!res.ok) return false;
-		if (res.headers.get('x-frame-options')?.toUpperCase().includes('SAMEORIGIN')) return false;
+		const x_frame_options = (res.headers.get('x-frame-options') ?? '').toUpperCase();
+		if (x_frame_options.includes('SAMEORIGIN') || x_frame_options.includes('DENY'))
+			return false;
 		const ct = res.headers.get('content-type') ?? '';
 		if (!ct.startsWith('image/') || ct.includes('text/html')) return false;
 		return true;
