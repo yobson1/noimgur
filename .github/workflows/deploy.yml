@@ -84,19 +84,30 @@ jobs:
           FIREFOX_EXTENSION_ID: ${{ secrets.FIREFOX_EXTENSION_ID }}
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+      - name: Submit to Edge Addon Store
+        continue-on-error: true
+        id: edge_submit
+        run: |
+          pnpm wxt submit \
+            --edge-zip ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip
+        env:
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
       - name: Check submission results
         run: |
           echo "Chrome submission: ${{ steps.chrome_submit.outcome }}"
           echo "Firefox submission: ${{ steps.firefox_submit.outcome }}"
-          if [ "${{ steps.chrome_submit.outcome }}" == "failure" ] && [ "${{ steps.firefox_submit.outcome }}" == "failure" ]; then
-            echo "::error::Both store submissions failed"
+          echo "Edge submission: ${{ steps.edge_submit.outcome }}"
+          FAILED=0
+          [ "${{ steps.chrome_submit.outcome }}" == "failure" ] && FAILED=$((FAILED+1)) && echo "::warning::Chrome submission failed"
+          [ "${{ steps.firefox_submit.outcome }}" == "failure" ] && FAILED=$((FAILED+1)) && echo "::warning::Firefox submission failed"
+          [ "${{ steps.edge_submit.outcome }}" == "failure" ] && FAILED=$((FAILED+1)) && echo "::warning::Edge submission failed"
+          if [ "$FAILED" == "3" ]; then
+            echo "::error::All store submissions failed"
             exit 1
-          elif [ "${{ steps.chrome_submit.outcome }}" == "failure" ]; then
-            echo "::warning::Chrome submission failed, but Firefox succeeded"
-          elif [ "${{ steps.firefox_submit.outcome }}" == "failure" ]; then
-            echo "::warning::Firefox submission failed, but Chrome succeeded"
-          else
-            echo "::notice::Both submissions succeeded"
+          elif [ "$FAILED" == "0" ]; then
+            echo "::notice::All submissions succeeded"
           fi
       - name: Create Release
         uses: softprops/action-gh-release@v2
