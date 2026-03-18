@@ -11,7 +11,7 @@ export default defineConfig({
 		name: 'noimgur',
 		description:
 			'Redirects imgur.com to a rimgo proxy instance for users in regions where imgur is blocked. Distributes load across all public rimgo instances.',
-		version: '1.0.0',
+		version: '1.1.0',
 		permissions: [
 			'declarativeNetRequest',
 			'declarativeNetRequestWithHostAccess',
