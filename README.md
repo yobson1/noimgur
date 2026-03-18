@@ -17,6 +17,11 @@ pnpm dev:firefox
 
 ## Building
 
+```sh
+pnpm build
+pnpm build:firefox
+```
+
 To create a bundled zip of the extension run:
 
 ```sh
