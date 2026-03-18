@@ -23,7 +23,7 @@ export default defineConfig({
 		host_permissions: ['*://*.imgur.com/*', 'https://rimgo.codeberg.page/*', '<all_urls>'],
 		browser_specific_settings: {
 			gecko: {
-				id: 'noimgur@yobson.xyz',
+				id: 'noimgur-amo@yobson.xyz',
 				// @ts-ignore - WXT doesn't support this field yet
 				data_collection_permissions: {
 					required: ['none']
