@@ -84,7 +84,8 @@ export async function getStoredPrefs(): Promise<StoredPrefs> {
 	return {
 		blacklist: (result.blacklist as string[]) ?? [],
 		privacyOnly: (result.privacyOnly as boolean) ?? false,
-		healthySet: (result.healthySet as string[]) ?? []
+		healthySet: (result.healthySet as string[]) ?? [],
+		autoRotate: (result.autoRotate as boolean) ?? true
 	};
 }
 

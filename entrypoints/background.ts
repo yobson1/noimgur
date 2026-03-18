@@ -3,14 +3,29 @@ import {
 	getStoredState,
 	fetchInstances,
 	applyInstance,
-	refreshHealthySet
+	refreshHealthySet,
+	getStoredPrefs
 } from '../lib/instances';
 import { ALARM_NAME, ROTATE_INTERVAL_MINUTES, MAX_STATE_AGE_MS } from '../lib/constants';
 
 async function initAndBroadcast() {
 	const instances = await fetchInstances();
 	await refreshHealthySet(instances);
-	await rotateInstance();
+
+	const prefs = await getStoredPrefs();
+	if (prefs.autoRotate) {
+		await rotateInstance();
+	} else {
+		// Still need to re-apply the stored instance so DNR rules are in place
+		const state = await getStoredState();
+		if (state) {
+			const stored = instances.find((i) => i.domain === state.instanceDomain);
+			if (stored) await applyInstance(stored);
+			else await rotateInstance(); // fallback if stored instance is gone
+		} else {
+			await rotateInstance(); // first ever run
+		}
+	}
 
 	// Notify all tabs that the proxy is now ready
 	const tabs = await browser.tabs.query({});
@@ -60,13 +75,20 @@ export default defineBackground(() => {
 		}
 	});
 
-	// Alarm: re-check health first, then rotate
+	// Alarm: re-check health, then rotate only if autoRotate is enabled
 	browser.alarms.onAlarm.addListener(async (alarm) => {
 		if (alarm.name === ALARM_NAME) {
-			console.log('[noimgur] Alarm fired, refreshing healthy set then rotating...');
+			console.log('[noimgur] Alarm fired, refreshing healthy set...');
 			const instances = await fetchInstances();
 			await refreshHealthySet(instances);
-			await rotateInstance();
+
+			const prefs = await getStoredPrefs();
+			if (prefs.autoRotate) {
+				console.log('[noimgur] Auto-rotate enabled, rotating instance...');
+				await rotateInstance();
+			} else {
+				console.log('[noimgur] Auto-rotate disabled, skipping rotation.');
+			}
 		}
 	});
 });

@@ -10,7 +10,12 @@ const app = document.getElementById('app')!;
 // ── State ────────────────────────────────────────────────────────────────────
 
 let instances: RimgoInstance[] = [];
-let prefs: StoredPrefs = { blacklist: [], privacyOnly: false, healthySet: [] };
+let prefs: StoredPrefs = {
+	blacklist: [],
+	privacyOnly: false,
+	healthySet: [],
+	autoRotate: true
+};
 let currentDomain = '';
 let loading = true;
 let nextAlarmMs = 0;
@@ -36,7 +41,8 @@ async function boot() {
 		prefs = {
 			blacklist: (p.blacklist as string[]) ?? [],
 			privacyOnly: (p.privacyOnly as boolean) ?? false,
-			healthySet: (p.healthySet as string[]) ?? []
+			healthySet: (p.healthySet as string[]) ?? [],
+			autoRotate: (p.autoRotate as boolean) ?? true
 		};
 	}
 
@@ -49,15 +55,12 @@ async function boot() {
 	loading = false;
 	renderAll();
 
-	// Start countdown to next health check
 	const alarm = await browser.alarms.get(ALARM_NAME);
 	if (alarm) {
 		nextAlarmMs = alarm.scheduledTime;
 		startCountdown();
 	}
 
-	// If the popup was opened before background init finished, storage changes
-	// (healthySet, instanceDomain) will arrive after renderAll(). Keep in sync.
 	browser.storage.onChanged.addListener((changes, area) => {
 		if (area !== 'local') return;
 		let dirty = false;
@@ -72,6 +75,10 @@ async function boot() {
 		}
 		if (changes.blacklist?.newValue) {
 			prefs.blacklist = changes.blacklist.newValue as string[];
+			dirty = true;
+		}
+		if (changes.autoRotate !== undefined) {
+			prefs.autoRotate = changes.autoRotate.newValue as boolean;
 			dirty = true;
 		}
 
@@ -103,6 +110,10 @@ function startCountdown() {
 	countdownInterval = setInterval(() => {
 		const el = document.getElementById('next-rotation');
 		if (!el) return;
+		if (!prefs.autoRotate) {
+			el.textContent = 'disabled';
+			return;
+		}
 		const remaining = nextAlarmMs - Date.now();
 		el.textContent = formatCountdown(remaining);
 	}, 1000);
@@ -148,6 +159,17 @@ function renderShell() {
       </label>
     </div>
 
+    <div class="privacy-row">
+      <div class="privacy-label">
+        <strong>Auto-rotate instance</strong>
+        <span>Switch to a different instance every hour to distribute traffic</span>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="autorotate-toggle" />
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
     <div class="list-header">
       <span class="list-header-text">Instances</span>
       <div class="list-count" id="list-count">—</div>
@@ -169,7 +191,6 @@ function renderShell() {
 		triggerRotate(e.currentTarget as HTMLButtonElement);
 	});
 
-	// Inline the SVG so currentColor inherits from CSS
 	fetch(refreshIconUrl)
 		.then((r) => r.text())
 		.then((svg) => {
@@ -183,7 +204,6 @@ function renderShell() {
 		renderInstanceList();
 		updateCount();
 
-		// If we just turned privacy mode on and the current instance doesn't qualify, rotate
 		if (prefs.privacyOnly) {
 			const current = instances.find((i) => i.domain === currentDomain);
 			const currentIsPrivate = current ? isPrivate(current) : false;
@@ -193,15 +213,36 @@ function renderShell() {
 			}
 		}
 	});
+
+	document.getElementById('autorotate-toggle')!.addEventListener('change', async (e) => {
+		prefs.autoRotate = (e.currentTarget as HTMLInputElement).checked;
+		await savePrefs();
+		updateRotationRow();
+	});
 }
 
 function renderAll() {
-	// Privacy toggle state
 	(document.getElementById('privacy-toggle') as HTMLInputElement).checked = prefs.privacyOnly;
+	(document.getElementById('autorotate-toggle') as HTMLInputElement).checked = prefs.autoRotate;
 
 	updateCurrentLabel();
 	renderInstanceList();
 	updateCount();
+	updateRotationRow();
+}
+
+function updateRotationRow() {
+	const row = document.querySelector<HTMLDivElement>('.rotation-row')!;
+	const countdown = document.getElementById('next-rotation')!;
+
+	if (!prefs.autoRotate) {
+		row.classList.add('rotation-row--disabled');
+		countdown.textContent = 'disabled';
+	} else {
+		row.classList.remove('rotation-row--disabled');
+		const remaining = nextAlarmMs - Date.now();
+		countdown.textContent = remaining > 0 ? formatCountdown(remaining) : '—';
+	}
 }
 
 function updateCurrentLabel() {
@@ -265,7 +306,6 @@ function renderInstanceList() {
 		const isDataCollected = collectsData(instance);
 		const isCurrent = instance.domain === currentDomain;
 		const isHiddenByPrivacyFilter = prefs.privacyOnly && !isPrivacySafe;
-		// Hide instances that failed the last health check entirely — they're not usable
 		const isUnhealthy =
 			prefs.healthySet.length > 0 && !prefs.healthySet.includes(instance.domain);
 
@@ -279,7 +319,6 @@ function renderInstanceList() {
 			.filter(Boolean)
 			.join(' ');
 
-		// Note: strip leading emoji/whitespace for display
 		const noteDisplay = instance.note
 			? instance.note.replace(/^[\u{1F300}-\u{1FAFF}\u26A0\uFE0F⚠️✅❌\s]+/gu, '').trim()
 			: null;
@@ -328,13 +367,11 @@ function renderInstanceList() {
 
 		row.addEventListener('click', async (e) => {
 			const target = e.target as HTMLElement;
-			if (target.tagName === 'A') return; // let link open normally
-			if (target.tagName === 'INPUT') return; // checkbox change handler covers this
+			if (target.tagName === 'A') return;
+			if (target.tagName === 'INPUT') return;
 
-			// Set this instance as active immediately
 			await browser.runtime.sendMessage({ type: 'SET_INSTANCE', domain: instance.domain });
 			currentDomain = instance.domain;
-			// Re-render list so active-row moves to the new selection
 			renderInstanceList();
 			updateCurrentLabel();
 		});

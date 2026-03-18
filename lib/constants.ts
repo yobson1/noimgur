@@ -7,4 +7,4 @@ export const MAX_STATE_AGE_MS = ROTATE_INTERVAL_MINUTES * 60 * 1000;
 export const ALARM_NAME = 'rotateInstance';
 
 export const STATE_KEYS = ['proxyBase', 'instanceDomain', 'lastUpdated'] as const;
-export const PREFS_KEYS = ['blacklist', 'privacyOnly', 'healthySet'] as const;
+export const PREFS_KEYS = ['blacklist', 'privacyOnly', 'healthySet', 'autoRotate'] as const;

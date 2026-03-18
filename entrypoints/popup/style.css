@@ -451,6 +451,14 @@ body {
 	font-style: italic;
 }
 
+.rotation-row--disabled {
+	opacity: 0.45;
+}
+
+.rotation-row--disabled .rotation-countdown {
+	color: var(--text-dim);
+}
+
 /* ── States ── */
 .state-msg {
 	padding: 24px 12px;
