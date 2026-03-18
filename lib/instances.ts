@@ -16,6 +16,9 @@ export async function checkInstanceHealth(instance: RimgoInstance): Promise<bool
 		const base = instance.url.replace(/\/$/, '');
 		const res = await fetch(`${base}/CzXTtJV.jpg`, {
 			method: 'GET',
+			// they wont be sent with real image requests and could include anubis tokens
+			// which let this health check succeed but not real redirected image requests
+			credentials: 'omit',
 			signal: controller.signal
 		});
 		clearTimeout(timeout);
