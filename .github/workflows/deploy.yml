@@ -16,7 +16,7 @@ jobs:
       version: ${{ steps.get_version.outputs.version }}
       version_changed: ${{ steps.check_version.outputs.version_changed }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - name: Check for version change
