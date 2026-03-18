@@ -21,9 +21,9 @@ async function initAndBroadcast() {
 		if (state) {
 			const stored = instances.find((i) => i.domain === state.instanceDomain);
 			if (stored) await applyInstance(stored);
-			else await rotateInstance(); // fallback if stored instance is gone
+			else await rotateInstance();
 		} else {
-			await rotateInstance(); // first ever run
+			await rotateInstance();
 		}
 	}
 
@@ -31,9 +31,7 @@ async function initAndBroadcast() {
 	const tabs = await browser.tabs.query({});
 	for (const tab of tabs) {
 		if (tab.id) {
-			browser.tabs.sendMessage(tab.id, { type: 'NOIMGUR_INIT' }).catch(() => {
-				// Tab may not have the content script, ignore
-			});
+			browser.tabs.sendMessage(tab.id, { type: 'NOIMGUR_INIT' }).catch(() => {});
 		}
 	}
 
@@ -57,11 +55,23 @@ export default defineBackground(() => {
 		await initAndBroadcast();
 	});
 
-	// Popup requests an immediate rotation (no health check — trusts healthySet)
 	browser.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 		const m = msg as { type: string; domain?: string };
 		if (m.type === 'ROTATE_NOW') {
 			rotateInstance().then(() => sendResponse({ ok: true }));
+			return true;
+		}
+		if (m.type === 'RECHECK_NOW') {
+			(async () => {
+				const instances = await fetchInstances();
+				const healthySet = await refreshHealthySet(instances);
+				const state = await getStoredState();
+				// Only rotate if the current instance failed the health check
+				if (state && !healthySet.includes(state.instanceDomain)) {
+					await rotateInstance();
+				}
+				sendResponse({ ok: true });
+			})();
 			return true;
 		}
 		if (m.type === 'SET_INSTANCE' && m.domain) {

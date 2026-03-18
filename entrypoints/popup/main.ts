@@ -119,12 +119,12 @@ function startCountdown() {
 	}, 1000);
 }
 
-// ── Trigger background rotation ───────────────────────────────────────────────
+// ── Trigger background tasks ────────────────────────────────────────────────────
 
-async function triggerRotate(btn: HTMLButtonElement) {
+async function triggerTask(btn: HTMLButtonElement, task: 'ROTATE_NOW' | 'RECHECK_NOW') {
 	btn.disabled = true;
 	try {
-		await browser.runtime.sendMessage({ type: 'ROTATE_NOW' });
+		await browser.runtime.sendMessage({ type: task });
 		const result = (await browser.storage.local.get([
 			'instanceDomain'
 		])) as Partial<StoredState>;
@@ -145,7 +145,7 @@ function renderShell() {
         <span class="logo">no<span>imgur</span></span>
         <span class="current-instance" id="cur-instance">loading…</span>
       </div>
-      <button class="refresh-btn" id="refresh-btn" title="Pick a new instance now"><span class="refresh-icon"></span></button>
+      <button class="refresh-btn" id="refresh-btn" title="Re-check instance health"><span class="refresh-icon"></span></button>
     </div>
 
     <div class="privacy-row">
@@ -188,7 +188,7 @@ function renderShell() {
   `;
 
 	document.getElementById('refresh-btn')!.addEventListener('click', (e) => {
-		triggerRotate(e.currentTarget as HTMLButtonElement);
+		triggerTask(e.currentTarget as HTMLButtonElement, 'RECHECK_NOW');
 	});
 
 	fetch(refreshIconUrl)
@@ -209,7 +209,7 @@ function renderShell() {
 			const currentIsPrivate = current ? isPrivate(current) : false;
 			if (!currentIsPrivate) {
 				const btn = document.getElementById('refresh-btn') as HTMLButtonElement;
-				await triggerRotate(btn);
+				await triggerTask(btn, 'ROTATE_NOW');
 			}
 		}
 	});
