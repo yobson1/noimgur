@@ -14,10 +14,13 @@
 		"compile": "tsc --noEmit",
 		"test": "vitest",
 		"test:run": "vitest run",
-		"postinstall": "wxt prepare"
+		"postinstall": "wxt prepare",
+		"sign:firefox": "dotenv -- sh -c 'wxt build -b firefox && git archive --format=zip HEAD -o .output/source.zip && web-ext sign --source-dir .output/firefox-mv2 --artifacts-dir .output/web-ext-artifacts --channel=unlisted --api-key=$AMO_KEY --api-secret=$AMO_SECRET --upload-source-code=.output/source.zip'"
 	},
 	"devDependencies": {
+		"dotenv-cli": "^11.0.0",
 		"typescript": "^5.9.3",
+		"web-ext": "^10.0.0",
 		"wxt": "^0.20.20"
 	}
 }

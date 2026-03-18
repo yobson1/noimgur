@@ -18,12 +18,15 @@ export default defineConfig({
 			'storage',
 			'alarms'
 		],
-		host_permissions: [
-			'*://*.imgur.com/*',
-			'https://rimgo.codeberg.page/*',
-			// Firefox requires the redirect *target* host to also be in host_permissions.
-			// Since rimgo instances can be on any domain, we need broad access here.
-			'<all_urls>'
-		]
+		host_permissions: ['*://*.imgur.com/*', 'https://rimgo.codeberg.page/*', '<all_urls>'],
+		browser_specific_settings: {
+			gecko: {
+				id: 'noimgur@yobson.xyz',
+				// @ts-ignore - WXT doesn't support this field yet
+				data_collection_permissions: {
+					required: ['none']
+				}
+			}
+		}
 	}
 });
