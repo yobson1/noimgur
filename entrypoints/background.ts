@@ -6,7 +6,7 @@ import {
 	refreshHealthySet,
 	getStoredPrefs
 } from '../lib/instances';
-import { ALARM_NAME, ROTATE_INTERVAL_MINUTES, MAX_STATE_AGE_MS } from '../lib/constants';
+import { ALARM_NAME, ROTATE_INTERVAL_MINUTES } from '../lib/constants';
 
 async function initAndBroadcast() {
 	const instances = await fetchInstances();
