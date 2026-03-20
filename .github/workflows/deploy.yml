@@ -111,6 +111,8 @@ jobs:
           fi
       - name: Create Release
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
         with:
           tag_name: 'v${{ needs.version.outputs.version }}'
           name: 'v${{ needs.version.outputs.version }}'
@@ -120,5 +122,3 @@ jobs:
             ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip
             ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-firefox.zip
             ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-sources.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
