@@ -2,7 +2,7 @@
 	"name": "noimgur",
 	"description": "Redirects imgur.com to rimgo proxy instances for users in blocked regions",
 	"private": true,
-	"version": "1.3.0",
+	"version": "1.3.1",
 	"type": "module",
 	"scripts": {
 		"dev": "wxt",
