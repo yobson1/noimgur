@@ -14,13 +14,8 @@ export default defineConfig({
 		name: 'noimgur',
 		description: 'Redirects imgur.com to rimgo proxy instances for users in blocked regions',
 		version: process.env.npm_package_version,
-		permissions: [
-			'declarativeNetRequest',
-			'declarativeNetRequestWithHostAccess',
-			'storage',
-			'alarms'
-		],
-		host_permissions: ['*://*.imgur.com/*', 'https://rimgo.codeberg.page/*', '<all_urls>'],
+		permissions: ['declarativeNetRequestWithHostAccess', 'storage', 'alarms'],
+		host_permissions: ['<all_urls>'],
 		browser_specific_settings: {
 			gecko: {
 				id: 'noimgur-amo@yobson.xyz',
