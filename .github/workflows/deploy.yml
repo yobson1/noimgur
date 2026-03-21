@@ -8,6 +8,24 @@ on:
     branches: ['main']
   pull_request:
     branches: ['main']
+  workflow_dispatch:
+    inputs:
+      submit_chrome:
+        description: 'Submit to Chrome Web Store'
+        type: boolean
+        default: false
+      submit_firefox:
+        description: 'Submit to Firefox Addon Store'
+        type: boolean
+        default: false
+      submit_edge:
+        description: 'Submit to Edge Addon Store'
+        type: boolean
+        default: false
+      create_release:
+        description: 'Create GitHub Release'
+        type: boolean
+        default: true
 
 jobs:
   version:
@@ -22,7 +40,9 @@ jobs:
       - name: Check for version change
         id: check_version
         run: |
-          if git diff --name-only HEAD~1..HEAD | grep -q '^package\.json$'; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "version_changed=1" >> "$GITHUB_OUTPUT"
+          elif git diff --name-only HEAD~1..HEAD | grep -q '^package\.json$'; then
             NEW_VERSION=$(jq -r .version package.json)
             LATEST_TAG=$(git tag --sort=-v:refname | head -n1)
             if [ -z "$LATEST_TAG" ]; then
@@ -32,10 +52,10 @@ jobs:
             else
               VERSION_CHANGED=0
             fi
+            echo "version_changed=$VERSION_CHANGED" >> "$GITHUB_OUTPUT"
           else
-            VERSION_CHANGED=0
+            echo "version_changed=0" >> "$GITHUB_OUTPUT"
           fi
-          echo "version_changed=$VERSION_CHANGED" >> "$GITHUB_OUTPUT"
       - name: Get version
         if: ${{ steps.check_version.outputs.version_changed == '1' }}
         id: get_version
@@ -65,6 +85,7 @@ jobs:
       - name: Submit to Chrome Web Store
         continue-on-error: true
         id: chrome_submit
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.submit_chrome }}
         run: |
           pnpm wxt submit \
             --chrome-zip ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip
@@ -76,6 +97,7 @@ jobs:
       - name: Submit to Firefox Addon Store
         continue-on-error: true
         id: firefox_submit
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.submit_firefox }}
         run: |
           pnpm wxt submit \
             --firefox-zip ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-firefox.zip \
@@ -87,6 +109,7 @@ jobs:
       - name: Submit to Edge Addon Store
         continue-on-error: true
         id: edge_submit
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.submit_edge }}
         run: |
           pnpm wxt submit \
             --edge-zip ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip
@@ -110,6 +133,7 @@ jobs:
             echo "::notice::All submissions succeeded"
           fi
       - name: Create Release
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.create_release }}
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.CUSTOM_GITHUB_TOKEN }}
