@@ -84,16 +84,26 @@ jobs:
         run: |
           pnpm run zip &&
           pnpm run zip:firefox
+      # needed since chrome webstore rejected the submission due to "name matches with either prefix or suffix of popular names"
+      - name: Patch chrome zip
+        run: |
+          ./cws-patch.sh ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip
+      - name: Upload archives as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: extension-zips-v${{ needs.version.outputs.version }}
+          path: |
+            ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip
+            ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-firefox.zip
+            ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-sources.zip
+            ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome-patched.zip
       - name: Submit to Chrome Web Store
         continue-on-error: true
         id: chrome_submit
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.submit_chrome }}
         run: |
-          CHROME_ZIP="${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip"
-          # needed since chrome webstore rejected the submission due to "name matches with either prefix or suffix of popular names"
-          ./cws-patch.sh ${{ env.DIRECTORY }}/${CHROME_ZIP}
           pnpm wxt submit \
-            --chrome-zip ${{ env.DIRECTORY }}/${CHROME_ZIP%.zip}-patched.zip
+            --chrome-zip ${{ env.DIRECTORY }}/${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome-patched.zip
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
