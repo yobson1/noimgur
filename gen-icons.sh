@@ -48,7 +48,7 @@ COUNT="${#LETTERS[@]}"
 
 for SIZE in "${SIZES[@]}"; do
     POINTSIZE=$((SIZE * 60 / 100))
-    CMD=(convert -size "${SIZE}x${SIZE}" xc:transparent -font "$FONT" -pointsize "$POINTSIZE")
+    CMD=(magick -size "${SIZE}x${SIZE}" xc:transparent -font "$FONT" -pointsize "$POINTSIZE")
 
     # Space letters evenly across the icon
     # For N letters, positions go from -(N-1)/2 * SPACING to +(N-1)/2 * SPACING
