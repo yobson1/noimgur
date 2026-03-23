@@ -8,7 +8,7 @@ export default defineConfig({
 		]
 	},
 	zip: {
-		excludeSources: ['gen-icons.sh', 'media/screenshots/*']
+		excludeSources: ['gen-icons.sh', 'cws-patch.sh', 'media/screenshots/*']
 	},
 	manifest: {
 		name: 'noimgur',
