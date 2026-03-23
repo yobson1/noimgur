@@ -67,9 +67,6 @@ jobs:
     if: ${{ needs.version.outputs.version_changed == '1' }}
     runs-on: ubuntu-latest
     steps:
-      # for cws-patch.sh/gen-icons.sh in chrome_submit
-      - name: Install ImageMagick
-        run: sudo apt-get install -y imagemagick
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
         with:

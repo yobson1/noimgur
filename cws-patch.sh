@@ -33,7 +33,7 @@ echo "Generating Chrome icons..."
 ICON_DIR="$WORK_DIR/icon"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-bash "$SCRIPT_DIR/gen-icons.sh" "$ICON_DIR" r:GREY i:GREEN p:GREY
+cp "$SCRIPT_DIR"/media/cws-icon/*.png "$ICON_DIR/"
 
 echo "Repacking $OUTPUT_ZIP..."
 cd "$WORK_DIR"
