@@ -67,6 +67,9 @@ jobs:
     if: ${{ needs.version.outputs.version_changed == '1' }}
     runs-on: ubuntu-latest
     steps:
+      # for cws-patch.sh/gen-icons.sh in chrome_submit
+      - name: Install ImageMagick
+        run: sudo apt-get install -y imagemagick
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
         with:
@@ -90,7 +93,7 @@ jobs:
           # needed since chrome webstore rejected the submission due to "name matches with either prefix or suffix of popular names"
           ./cws-patch.sh ${{ env.DIRECTORY }}/${CHROME_ZIP}
           pnpm wxt submit \
-            --chrome-zip ${{ env.DIRECTORY }}/${CHROME_ZIP}-patched.zip
+            --chrome-zip "${CHROME_ZIP%.zip}-patched.zip"
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
