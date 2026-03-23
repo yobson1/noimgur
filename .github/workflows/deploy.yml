@@ -88,9 +88,9 @@ jobs:
         run: |
           CHROME_ZIP="${{ github.event.repository.name }}-${{ needs.version.outputs.version }}-chrome.zip"
           # needed since chrome webstore rejected the submission due to "name matches with either prefix or suffix of popular names"
-          ./cws-patch.sh ${{ env.DIRECTORY }}/${{ CHROME_ZIP }}
+          ./cws-patch.sh ${{ env.DIRECTORY }}/${CHROME_ZIP}
           pnpm wxt submit \
-            --chrome-zip ${{ env.DIRECTORY }}/${{ CHROME_ZIP }}-patched.zip
+            --chrome-zip ${{ env.DIRECTORY }}/${CHROME_ZIP}-patched.zip
         env:
           CHROME_EXTENSION_ID: ${{ secrets.CHROME_EXTENSION_ID }}
           CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
