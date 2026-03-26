@@ -2,7 +2,7 @@
 
 [![mozilla add-on](https://img.shields.io/amo/v/noimgur-amo%40yobson.xyz?logo=firefoxbrowser&color=%23FF7139)](https://addons.mozilla.org/firefox/addon/noimgur/)
 <!--[![chrome web store](https://img.shields.io/chrome-web-store/v/bjofjgmleldgbcocnpejlgiklelnohnb?logo=chromewebstore&color=%234285F4)](https://chromewebstore.google.com/detail/bjofjgmleldgbcocnpejlgiklelnohnb)-->
-<!--[![edge add-on](https://img.shields.io/badge/dynamic/json?label=edge%20add-on&prefix=v&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Faefmjbiknjhljnlbeomiaggimjjgafpp)](https://microsoftedge.microsoft.com/addons/detail/noimgur/aefmjbiknjhljnlbeomiaggimjjgafpp)-->
+[![edge add-on](https://img.shields.io/badge/dynamic/json?label=edge%20add-on&prefix=v&query=%24.version&url=https%3A%2F%2Fmicrosoftedge.microsoft.com%2Faddons%2Fgetproductdetailsbycrxid%2Faefmjbiknjhljnlbeomiaggimjjgafpp)](https://microsoftedge.microsoft.com/addons/detail/noimgur/aefmjbiknjhljnlbeomiaggimjjgafpp)
 
 [![GitHub License](https://img.shields.io/github/license/yobson1/noimgur)](https://github.com/yobson1/noimgur/blob/main/LICENSE)
 [![WXT Badge](https://img.shields.io/badge/built_with-WXT-67D55E?logo=wxt&link=https%3A%2F%2Fwxt.dev%2F)](https://wxt.dev)
