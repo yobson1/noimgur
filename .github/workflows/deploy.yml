@@ -50,9 +50,13 @@ jobs:
             --chrome-zip ${{ env.DIRECTORY }}/*-chrome-patched.zip
         env:
           CHROME_EXTENSION_ID: bjofjgmleldgbcocnpejlgiklelnohnb
-          CHROME_CLIENT_ID: ${{ secrets.CHROME_CLIENT_ID }}
-          CHROME_CLIENT_SECRET: ${{ secrets.CHROME_CLIENT_SECRET }}
-          CHROME_REFRESH_TOKEN: ${{ secrets.CHROME_REFRESH_TOKEN }}
+          CHROME_API_VERSION: v2
+          CHROME_PUBLISHER_ID: ${{ secrets.CHROME_PUBLISHER_ID }}
+          CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL: ${{ secrets.CHROME_SERVICE_ACCOUNT_CLIENT_EMAIL }}
+          CHROME_SERVICE_ACCOUNT_PRIVATE_KEY: ${{ secrets.CHROME_SERVICE_ACCOUNT_PRIVATE_KEY }}
+          CHROME_CANCEL_PENDING: true
+          CHROME_SKIP_REVIEW: false
+          CHROME_SKIP_SUBMIT_REVIEW: false
       - name: Submit to Firefox Addon Store
         continue-on-error: true
         id: firefox_submit
@@ -64,6 +68,7 @@ jobs:
           FIREFOX_EXTENSION_ID: noimgur-amo@yobson.xyz
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
+          FIREFOX_CHANNEL: listed
       - name: Submit to Edge Addon Store
         continue-on-error: true
         id: edge_submit
@@ -74,6 +79,7 @@ jobs:
           EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_SKIP_SUBMIT_REVIEW: false
       - name: Check submission results
         run: |
           echo "Chrome submission: ${{ steps.chrome_submit.outcome }}"
