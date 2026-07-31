@@ -250,6 +250,21 @@ html.fullscreen #app {
 	letter-spacing: 0.08em;
 }
 
+.list-heading {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.list-source {
+	font-size: 9px;
+	color: var(--text-mid);
+}
+
+.list-source--bundled {
+	color: var(--warn);
+}
+
 /* ── Rotation countdown ── */
 .rotation-row {
 	display: flex;

@@ -2,7 +2,8 @@ import './style.css';
 import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
 import { STATE_KEYS, PREFS_KEYS, ALARM_NAME } from '../../lib/constants';
 import { isPrivate, collectsData, countryFlag } from '../../lib/utils';
-import { fetchInstances, filterInstances } from '../../lib/instances';
+import type { InstanceSource } from '../../lib/instances';
+import { fetchInstancesWithSource, filterInstances } from '../../lib/instances';
 import refreshIconUrl from '@/assets/refresh.svg?url';
 
 const app = document.getElementById('app')!;
@@ -17,6 +18,7 @@ let prefs: StoredPrefs = {
 	autoRotate: true
 };
 let currentDomain = '';
+let instanceSource: InstanceSource | null = null;
 let loading = true;
 let nextAlarmMs = 0;
 let countdownInterval: ReturnType<typeof setInterval> | null = null;
@@ -37,7 +39,7 @@ async function boot() {
 	const [stateResult, prefsResult, apiResult] = await Promise.allSettled([
 		browser.storage.local.get([...STATE_KEYS]) as Promise<StoredState>,
 		browser.storage.local.get([...PREFS_KEYS]),
-		fetchInstances()
+		fetchInstancesWithSource()
 	]);
 
 	if (stateResult.status === 'fulfilled' && stateResult.value.instanceDomain) {
@@ -55,7 +57,8 @@ async function boot() {
 	}
 
 	if (apiResult.status === 'fulfilled') {
-		instances = apiResult.value;
+		instances = apiResult.value.instances;
+		instanceSource = apiResult.value.source;
 	}
 
 	loading = false;
@@ -177,7 +180,10 @@ function renderShell() {
     </div>
 
     <div class="list-header">
-      <span class="list-header-text">Instances</span>
+      <div class="list-heading">
+        <span class="list-header-text">Instances</span>
+        <span class="list-source" id="list-source">checking remote lists…</span>
+      </div>
       <div class="list-count" id="list-count">—</div>
     </div>
 
@@ -232,9 +238,26 @@ function renderAll() {
 	(document.getElementById('autorotate-toggle') as HTMLInputElement).checked = prefs.autoRotate;
 
 	updateCurrentLabel();
+	updateInstanceSource();
 	renderInstanceList();
 	updateCount();
 	updateRotationRow();
+}
+
+function updateInstanceSource() {
+	const el = document.getElementById('list-source')!;
+	el.classList.toggle('list-source--bundled', instanceSource === 'bundled');
+
+	if (instanceSource === 'bundled') {
+		el.textContent = 'source: bundled instances.json';
+		el.title = 'Bundled fallback list';
+	} else if (instanceSource) {
+		el.textContent = `source: ${new URL(instanceSource).hostname}`;
+		el.title = instanceSource;
+	} else {
+		el.textContent = 'source unavailable';
+		el.removeAttribute('title');
+	}
 }
 
 function updateRotationRow() {

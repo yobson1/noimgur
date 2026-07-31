@@ -10,6 +10,13 @@ import {
 import { isPrivate } from './utils';
 import bundledInstances from './instances.json';
 
+export type InstanceSource = (typeof API_URLS)[number] | 'bundled';
+
+export interface InstanceFetchResult {
+	instances: RimgoInstance[];
+	source: InstanceSource;
+}
+
 async function fetchInstancesFromUrl(url: string, signal: AbortSignal): Promise<RimgoInstance[]> {
 	const res = await fetch(url, { signal });
 	if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -18,21 +25,31 @@ async function fetchInstancesFromUrl(url: string, signal: AbortSignal): Promise<
 	return data.clearnet.filter((i) => i.url.startsWith('https'));
 }
 
-export async function fetchInstances(): Promise<RimgoInstance[]> {
+export async function fetchInstancesWithSource(): Promise<InstanceFetchResult> {
 	const controller = new AbortController();
 	const timeout = setTimeout(() => controller.abort(), API_FETCH_TIMEOUT_MS);
 
 	try {
 		return await Promise.any(
-			API_URLS.map((url) => fetchInstancesFromUrl(url, controller.signal))
+			API_URLS.map(async (url) => ({
+				instances: await fetchInstancesFromUrl(url, controller.signal),
+				source: url
+			}))
 		);
 	} catch (err) {
 		console.warn('[noimgur] Remote instance lists unavailable, using bundled list.', err);
-		return bundledInstances.clearnet.filter((i) => i.url.startsWith('https'));
+		return {
+			instances: bundledInstances.clearnet.filter((i) => i.url.startsWith('https')),
+			source: 'bundled'
+		};
 	} finally {
 		clearTimeout(timeout);
 		controller.abort();
 	}
+}
+
+export async function fetchInstances(): Promise<RimgoInstance[]> {
+	return (await fetchInstancesWithSource()).instances;
 }
 
 export async function checkInstanceHealth(instance: RimgoInstance): Promise<boolean> {
