@@ -1,23 +1,38 @@
 import type { RimgoApiResponse, RimgoInstance, StoredState, StoredPrefs } from './types';
-import { API_URLS, RULE_ID, IMGUR_REGEX_CAPTURE, STATE_KEYS, PREFS_KEYS } from './constants';
+import {
+	API_URLS,
+	API_FETCH_TIMEOUT_MS,
+	RULE_ID,
+	IMGUR_REGEX_CAPTURE,
+	STATE_KEYS,
+	PREFS_KEYS
+} from './constants';
 import { isPrivate } from './utils';
 import bundledInstances from './instances.json';
 
-export async function fetchInstances(): Promise<RimgoInstance[]> {
-	for (const url of API_URLS) {
-		try {
-			const res = await fetch(url);
-			if (!res.ok) throw new Error(`HTTP ${res.status}`);
-			const data: RimgoApiResponse = await res.json();
-			if (!Array.isArray(data.clearnet)) throw new Error('Response has no clearnet instances');
-			return data.clearnet.filter((i) => i.url.startsWith('https'));
-		} catch (err) {
-			console.warn(`[noimgur] Failed to fetch instances from ${url}:`, err);
-		}
-	}
+async function fetchInstancesFromUrl(url: string, signal: AbortSignal): Promise<RimgoInstance[]> {
+	const res = await fetch(url, { signal });
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	const data: RimgoApiResponse = await res.json();
+	if (!Array.isArray(data.clearnet)) throw new Error('Response has no clearnet instances');
+	return data.clearnet.filter((i) => i.url.startsWith('https'));
+}
 
-	console.warn('[noimgur] Remote instance lists unavailable, using bundled list.');
-	return bundledInstances.clearnet.filter((i) => i.url.startsWith('https'));
+export async function fetchInstances(): Promise<RimgoInstance[]> {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), API_FETCH_TIMEOUT_MS);
+
+	try {
+		return await Promise.any(
+			API_URLS.map((url) => fetchInstancesFromUrl(url, controller.signal))
+		);
+	} catch (err) {
+		console.warn('[noimgur] Remote instance lists unavailable, using bundled list.', err);
+		return bundledInstances.clearnet.filter((i) => i.url.startsWith('https'));
+	} finally {
+		clearTimeout(timeout);
+		controller.abort();
+	}
 }
 
 export async function checkInstanceHealth(instance: RimgoInstance): Promise<boolean> {

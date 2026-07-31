@@ -4,6 +4,7 @@ export const API_URLS = [
 	'https://rimgo.codeberg.page/api.json',
 	'https://codeberg.org/rimgo/instances/raw/branch/main/config.json'
 ] as const;
+export const API_FETCH_TIMEOUT_MS = 5000;
 export const RULE_ID = 1;
 export const ROTATE_INTERVAL_MINUTES = 60;
 export const ALARM_NAME = 'rotateInstance';
