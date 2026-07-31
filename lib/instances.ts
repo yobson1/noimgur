@@ -1,12 +1,23 @@
 import type { RimgoApiResponse, RimgoInstance, StoredState, StoredPrefs } from './types';
-import { API_URL, RULE_ID, IMGUR_REGEX_CAPTURE, STATE_KEYS, PREFS_KEYS } from './constants';
+import { API_URLS, RULE_ID, IMGUR_REGEX_CAPTURE, STATE_KEYS, PREFS_KEYS } from './constants';
 import { isPrivate } from './utils';
+import bundledInstances from './instances.json';
 
 export async function fetchInstances(): Promise<RimgoInstance[]> {
-	const res = await fetch(API_URL);
-	if (!res.ok) throw new Error(`Failed to fetch instances: ${res.status}`);
-	const data: RimgoApiResponse = await res.json();
-	return data.clearnet.filter((i) => i.url.startsWith('https'));
+	for (const url of API_URLS) {
+		try {
+			const res = await fetch(url);
+			if (!res.ok) throw new Error(`HTTP ${res.status}`);
+			const data: RimgoApiResponse = await res.json();
+			if (!Array.isArray(data.clearnet)) throw new Error('Response has no clearnet instances');
+			return data.clearnet.filter((i) => i.url.startsWith('https'));
+		} catch (err) {
+			console.warn(`[noimgur] Failed to fetch instances from ${url}:`, err);
+		}
+	}
+
+	console.warn('[noimgur] Remote instance lists unavailable, using bundled list.');
+	return bundledInstances.clearnet.filter((i) => i.url.startsWith('https'));
 }
 
 export async function checkInstanceHealth(instance: RimgoInstance): Promise<boolean> {

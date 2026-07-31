@@ -1,8 +1,8 @@
 import './style.css';
 import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
-import { API_URL, STATE_KEYS, PREFS_KEYS, ALARM_NAME } from '../../lib/constants';
+import { STATE_KEYS, PREFS_KEYS, ALARM_NAME } from '../../lib/constants';
 import { isPrivate, collectsData, countryFlag } from '../../lib/utils';
-import { filterInstances } from '../../lib/instances';
+import { fetchInstances, filterInstances } from '../../lib/instances';
 import refreshIconUrl from '@/assets/refresh.svg?url';
 
 const app = document.getElementById('app')!;
@@ -37,7 +37,7 @@ async function boot() {
 	const [stateResult, prefsResult, apiResult] = await Promise.allSettled([
 		browser.storage.local.get([...STATE_KEYS]) as Promise<StoredState>,
 		browser.storage.local.get([...PREFS_KEYS]),
-		fetch(API_URL).then((r) => r.json())
+		fetchInstances()
 	]);
 
 	if (stateResult.status === 'fulfilled' && stateResult.value.instanceDomain) {
@@ -55,9 +55,7 @@ async function boot() {
 	}
 
 	if (apiResult.status === 'fulfilled') {
-		instances = (apiResult.value.clearnet as RimgoInstance[]).filter((i) =>
-			i.url.startsWith('https')
-		);
+		instances = apiResult.value;
 	}
 
 	loading = false;

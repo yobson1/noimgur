@@ -1,0 +1,246 @@
+{
+	"title": "rimgo instances",
+	"logo": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='512' height='512'%3E%3Cpath d='M349.15 398.825v-250m-235.975 13.992h250' fill='none' stroke='%23000' stroke-width='28'/%3E%3Ccircle cx='364.039' cy='147.961' r='34.785' fill='%231e88e5'/%3E%3C/svg%3E",
+	"projectLink": "https://codeberg.org/rimgo/rimgo",
+	"apiUrl": "https://rimgo.codeberg.page/api.json",
+	"baseUrl": "https://rimgo.codeberg.page",
+	"clearnet": [
+		{
+			"domain": "ri.bcow.xyz",
+			"url": "https://ri.bcow.xyz",
+			"country": "CA",
+			"provider": "BunnyCDN",
+			"note": "⚠️ Data collected<br>Official instance"
+		},
+		{
+			"domain": "rimgo.pussthecat.org",
+			"url": "https://rimgo.pussthecat.org",
+			"country": "DE",
+			"provider": "Hetzner",
+			"note": "⚠️ Data collected"
+		},
+		{
+			"domain": "imgur.artemislena.eu",
+			"url": "https://imgur.artemislena.eu",
+			"country": "DE",
+			"provider": "Vodafone Deutschland",
+			"note": "✅ Data not collected<br>Self-hosted, provider is ISP"
+		},
+		{
+			"domain": "rimgo.hostux.net",
+			"url": "https://rimgo.hostux.net",
+			"country": "FR",
+			"provider": "Gandi",
+			"note": "⚠️ Data collected"
+		},
+		{
+			"domain": "ri.nadeko.net",
+			"url": "https://ri.nadeko.net",
+			"country": "CL",
+			"provider": "Movistar",
+			"note": "✅ Data not collected<br>Self-hosted"
+		},
+		{
+			"domain": "rimgo.nohost.network",
+			"url": "https://rimgo.nohost.network",
+			"country": "MX",
+			"provider": "Telmex",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rimgo.catsarch.com",
+			"url": "https://rimgo.catsarch.com",
+			"country": "US, DE",
+			"provider": "Netcup",
+			"note": "⚠️ Data collected"
+		},
+		{
+			"domain": "rimgo.ducks.party",
+			"url": "https://rimgo.ducks.party",
+			"country": "NL",
+			"provider": "Netcup",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rmgur.com",
+			"url": "https://rmgur.com",
+			"country": "PL",
+			"provider": "OVH",
+			"note": "✅ Data not collected<br>Alias of imgur.fsky.io"
+		},
+		{
+			"domain": "rimgo.privacyredirect.com",
+			"url": "https://rimgo.privacyredirect.com",
+			"country": "FI",
+			"provider": "Private WebHost",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rimgo.reallyaweso.me",
+			"url": "https://rimgo.reallyaweso.me",
+			"country": "DE",
+			"provider": "Hetzner",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rimgo.bloat.cat",
+			"url": "https://rimgo.bloat.cat",
+			"country": "DE",
+			"provider": "Datalix",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rimgo.darkness.services",
+			"url": "https://rimgo.darkness.services",
+			"country": "US",
+			"provider": "Stark",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rimgo.4o1x5.dev",
+			"url": "https://rimgo.4o1x5.dev",
+			"country": "HU",
+			"provider": "Telekom",
+			"note": "⚠️ Data collected"
+		},
+		{
+			"domain": "rimgo.aketawi.space",
+			"url": "https://rimgo.aketawi.space",
+			"country": "RU",
+			"provider": "Cloudflare",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "imgur.nerdvpn.de",
+			"url": "https://imgur.nerdvpn.de",
+			"country": "UA",
+			"provider": "Virtual Systems (vsys.host)",
+			"note": "✅ Data not collected<br>Instance uses rotating proxies to prevent blockage by imgur"
+		},
+		{
+			"domain": "rimgo.canine.tools",
+			"url": "https://rimgo.canine.tools",
+			"country": "US",
+			"provider": "OVH",
+			"note": "⚠️ Data collected"
+		},
+		{
+			"domain": "rimgo.astrial.org",
+			"url": "https://rimgo.astrial.org",
+			"country": "AU",
+			"provider": "Neptune Internet",
+			"note": "⚠️ Data collected"
+		},
+		{
+			"domain": "r.opnxng.com",
+			"url": "https://r.opnxng.com",
+			"country": "DE",
+			"provider": "Datalix",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rg.kuuro.net",
+			"url": "https://rg.kuuro.net",
+			"country": "US",
+			"provider": "Kyun Hosting",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "rimgo.proxik.cloud",
+			"url": "https://rimgo.proxik.cloud",
+			"country": "DE",
+			"provider": "Cloudflare",
+			"note": "✅ Data not collected"
+		},
+		{
+			"domain": "anaimg.starbeamrainbowlabs.com",
+			"url": "https://anaimg.starbeamrainbowlabs.com",
+			"country": "FR",
+			"provider": "OVH",
+			"note": "✅ Data not collected<br>Self-hosted, provider is OVH. All Imgur traffic sent through Tor."
+		},
+		{
+			"domain": "rimgo.wuemeli.com",
+			"url": "https://rimgo.wuemeli.com",
+			"country": "CH",
+			"provider": "Swisscom",
+			"note": "⚠️ Data collected<br>Self-hosted, provider is ISP"
+		},
+		{
+			"domain": "rimgo.manerakai.com",
+			"url": "https://rimgo.manerakai.com",
+			"country": "TR",
+			"provider": "ATLANTIS-CENTRAL",
+			"note": "⚠️ Data collected<br>Self-hosted, provider is ISP"
+		}
+	],
+	"tor": [
+		{
+			"domain": "imgur.lpoaj7z2zkajuhgnlltpeqh3zyq7wk2iyeggqaduhgxhyajtdt2j7wad.onion",
+			"url": "http://rimgo.micohauwkjbyw5meacrb4ipicwvwg4xtzl7y7viv53kig2mdcsvwkyyd.onion",
+			"note": "✅ Data not collected<br>Onion of imgur.artemislena.eu",
+			"clearnet": "imgur.artemislena.eu"
+		},
+		{
+			"domain": "rimgo.nadekonw7plitnjuawu6ytjsl7jlglk2t6pyq6eftptmiv3dvqndwvyd.onion",
+			"url": "http://rimgo.nadekonw7plitnjuawu6ytjsl7jlglk2t6pyq6eftptmiv3dvqndwvyd.onion",
+			"note": "✅ Data not collected<br>Onion of ri.nadeko.net",
+			"clearnet": "ri.nadeko.net"
+		},
+		{
+			"domain": "rimgo.catsarchywsyuss6jdxlypsw5dc7owd5u5tr6bujxb7o6xw2hipqehyd.onion",
+			"url": "http://rimgo.catsarchywsyuss6jdxlypsw5dc7owd5u5tr6bujxb7o6xw2hipqehyd.onion",
+			"note": "⚠️ Data collected<br>Onion of rimgo.catsarch.com",
+			"clearnet": "rimgo.catsarch.com"
+		},
+		{
+			"domain": "imgurolljpstjc2w5gb6lgcxhvdsndmurvbbkvpv6s5pif3kkhe5ptad.onion",
+			"url": "http://imgurolljpstjc2w5gb6lgcxhvdsndmurvbbkvpv6s5pif3kkhe5ptad.onion",
+			"note": "✅ Data not collected<br>Onion of rmgur.com",
+			"clearnet": "rmgur.com"
+		},
+		{
+			"domain": "rg.kuu7oukh73yy4pn5iahfnm3k6vppyseqtt6xn3xs33big5cnlv2fr5yd.onion",
+			"url": "http://rg.kuu7oukh73yy4pn5iahfnm3k6vppyseqtt6xn3xs33big5cnlv2fr5yd.onion",
+			"note": "✅ Data not collected<br>Onion of rg.kuuro.net",
+			"clearnet": "rg.kuuro.net"
+		}
+	],
+	"i2p": [
+		{
+			"domain": "rimgo.i2p",
+			"url": "http://rimgo.i2p",
+			"note": "✅ Data not collected<br>i.habedieeh.re on I2P",
+			"clearnet": "i.habedieeh.re"
+		},
+		{
+			"domain": "rimgov7l2tqyrm5txrtvhtnfyrzkc5d7ipafofavchbnnyog4r3q.b32.i2p",
+			"url": "http://rimgov7l2tqyrm5txrtvhtnfyrzkc5d7ipafofavchbnnyog4r3q.b32.i2p",
+			"note": "✅ Data not collected<br>Same as rimgo.i2p",
+			"clearnet": "i.habedieeh.re"
+		},
+		{
+			"domain": "rimgo.zzls.i2p",
+			"url": "http://rimgo.zzls.i2p",
+			"note": "✅ Data not collected<br>ri.nadeko.net on I2P",
+			"clearnet": "ri.nadeko.net"
+		},
+		{
+			"domain": "p57356k2xwhxrg2lxrjajcftkrptv4zejeeblzfgkcvpzuetkz2a.b32.i2p",
+			"url": "http://p57356k2xwhxrg2lxrjajcftkrptv4zejeeblzfgkcvpzuetkz2a.b32.i2p",
+			"note": "✅ Data not collected<br>Same as rimgo.zzls.i2p",
+			"clearnet": "rimgo.zzls.i2p"
+		},
+		{
+			"domain": "rimgo.ls.i2p",
+			"url": "http://iubqllyjjutilosihcq6ikfcwizk4rc6kyef42i4lnqbvdw7au7q.b32.i2p/",
+			"note": "✅ Data not collected<br>Self-hosted by lost+skunk"
+		},
+		{
+			"domain": "wzfvt5txnmsfsbl24qjnm2enptnlghdsrfp3z5m2msfnok4h4juq.b32.i2p",
+			"url": "http://wzfvt5txnmsfsbl24qjnm2enptnlghdsrfp3z5m2msfnok4h4juq.b32.i2p",
+			"note": "⚠️ Data collected<br>rimgo.catsarch.com on I2P",
+			"clearnet": "rimgo.catsarch.com"
+		}
+	]
+}
