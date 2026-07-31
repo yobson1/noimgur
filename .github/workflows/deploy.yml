@@ -42,6 +42,15 @@ jobs:
             ${{ env.DIRECTORY }}/*-firefox.zip
             ${{ env.DIRECTORY }}/*-sources.zip
             ${{ env.DIRECTORY }}/*-chrome-patched.zip
+      - name: Submit to Edge Addon Store
+        run: |
+          pnpm wxt submit \
+            --edge-zip ${{ env.DIRECTORY }}/*-chrome.zip
+        env:
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_SKIP_SUBMIT_REVIEW: false
       - name: Submit to Chrome Web Store
         run: |
           pnpm wxt submit \
@@ -65,15 +74,6 @@ jobs:
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
           FIREFOX_CHANNEL: listed
-      - name: Submit to Edge Addon Store
-        run: |
-          pnpm wxt submit \
-            --edge-zip ${{ env.DIRECTORY }}/*-chrome.zip
-        env:
-          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
-          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
-          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
-          EDGE_SKIP_SUBMIT_REVIEW: false
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
