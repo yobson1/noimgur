@@ -15,6 +15,23 @@ jobs:
   submit:
     runs-on: ubuntu-latest
     steps:
+      - name: Check Edge API key expiry
+        env:
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_API_KEY_EXPIRES: '2026-10-11'
+        run: |
+          if [ -z "$EDGE_API_KEY" ]; then
+            echo "::error::EDGE_API_KEY is not configured"
+            exit 1
+          fi
+
+          TODAY=$(date -u +%F)
+          if [[ "$TODAY" > "$EDGE_API_KEY_EXPIRES" || "$TODAY" == "$EDGE_API_KEY_EXPIRES" ]]; then
+            echo "::error::EDGE_API_KEY expired on $EDGE_API_KEY_EXPIRES"
+            exit 1
+          fi
+
+          echo "::notice::EDGE_API_KEY is valid until $EDGE_API_KEY_EXPIRES"
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
