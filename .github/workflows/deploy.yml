@@ -42,19 +42,7 @@ jobs:
             ${{ env.DIRECTORY }}/*-firefox.zip
             ${{ env.DIRECTORY }}/*-sources.zip
             ${{ env.DIRECTORY }}/*-chrome-patched.zip
-      - name: Submit to Edge Addon Store
-        run: |
-          pnpm wxt submit \
-            --edge-zip ${{ env.DIRECTORY }}/*-chrome.zip
-        env:
-          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
-          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
-          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
-          EDGE_SKIP_SUBMIT_REVIEW: false
-      - name: Submit to Chrome Web Store
-        run: |
-          pnpm wxt submit \
-            --chrome-zip ${{ env.DIRECTORY }}/*-chrome-patched.zip
+      - name: Submit to extension stores
         env:
           CHROME_EXTENSION_ID: bjofjgmleldgbcocnpejlgiklelnohnb
           CHROME_API_VERSION: v2
@@ -64,16 +52,19 @@ jobs:
           CHROME_CANCEL_PENDING: true
           CHROME_SKIP_REVIEW: false
           CHROME_SKIP_SUBMIT_REVIEW: false
-      - name: Submit to Firefox Addon Store
-        run: |
-          pnpm wxt submit \
-            --firefox-zip ${{ env.DIRECTORY }}/*-firefox.zip \
-            --firefox-sources-zip ${{ env.DIRECTORY }}/*-sources.zip
-        env:
           FIREFOX_EXTENSION_ID: noimgur-amo@yobson.xyz
           FIREFOX_JWT_ISSUER: ${{ secrets.FIREFOX_JWT_ISSUER }}
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
           FIREFOX_CHANNEL: listed
+          EDGE_PRODUCT_ID: ${{ secrets.EDGE_PRODUCT_ID }}
+          EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
+          EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
+          EDGE_SKIP_SUBMIT_REVIEW: false
+        run: |
+          pnpm wxt submit \
+            --chrome-zip ${{ env.DIRECTORY }}/*-chrome-patched.zip \
+            --firefox-zip ${{ env.DIRECTORY }}/*-firefox.zip --firefox-sources-zip ${{ env.DIRECTORY }}/*-sources.zip \
+            --edge-zip ${{ env.DIRECTORY }}/*-chrome.zip
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
