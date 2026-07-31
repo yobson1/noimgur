@@ -43,8 +43,6 @@ jobs:
             ${{ env.DIRECTORY }}/*-sources.zip
             ${{ env.DIRECTORY }}/*-chrome-patched.zip
       - name: Submit to Chrome Web Store
-        continue-on-error: true
-        id: chrome_submit
         run: |
           pnpm wxt submit \
             --chrome-zip ${{ env.DIRECTORY }}/*-chrome-patched.zip
@@ -58,8 +56,6 @@ jobs:
           CHROME_SKIP_REVIEW: false
           CHROME_SKIP_SUBMIT_REVIEW: false
       - name: Submit to Firefox Addon Store
-        continue-on-error: true
-        id: firefox_submit
         run: |
           pnpm wxt submit \
             --firefox-zip ${{ env.DIRECTORY }}/*-firefox.zip \
@@ -70,8 +66,6 @@ jobs:
           FIREFOX_JWT_SECRET: ${{ secrets.FIREFOX_JWT_SECRET }}
           FIREFOX_CHANNEL: listed
       - name: Submit to Edge Addon Store
-        continue-on-error: true
-        id: edge_submit
         run: |
           pnpm wxt submit \
             --edge-zip ${{ env.DIRECTORY }}/*-chrome.zip
@@ -80,21 +74,6 @@ jobs:
           EDGE_CLIENT_ID: ${{ secrets.EDGE_CLIENT_ID }}
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
           EDGE_SKIP_SUBMIT_REVIEW: false
-      - name: Check submission results
-        run: |
-          echo "Chrome submission: ${{ steps.chrome_submit.outcome }}"
-          echo "Firefox submission: ${{ steps.firefox_submit.outcome }}"
-          echo "Edge submission: ${{ steps.edge_submit.outcome }}"
-          FAILED=0
-          [ "${{ steps.chrome_submit.outcome }}" == "failure" ] && FAILED=$((FAILED+1)) && echo "::warning::Chrome submission failed"
-          [ "${{ steps.firefox_submit.outcome }}" == "failure" ] && FAILED=$((FAILED+1)) && echo "::warning::Firefox submission failed"
-          [ "${{ steps.edge_submit.outcome }}" == "failure" ] && FAILED=$((FAILED+1)) && echo "::warning::Edge submission failed"
-          if [ "$FAILED" == "3" ]; then
-            echo "::error::All store submissions failed"
-            exit 1
-          elif [ "$FAILED" == "0" ]; then
-            echo "::notice::All submissions succeeded"
-          fi
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
