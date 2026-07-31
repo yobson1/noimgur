@@ -163,7 +163,7 @@ export async function rotateInstance(): Promise<void> {
 			return;
 		}
 
-		const picked = eligible[Math.floor(Math.random() * eligible.length)];
+		const picked = eligible[Math.floor(Math.random() * eligible.length)]!;
 		await applyInstance(picked);
 	} catch (err) {
 		console.error('[noimgur] Failed to rotate instance:', err);
