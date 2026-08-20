@@ -57,8 +57,13 @@ export async function checkInstanceHealth(instance: RimgoInstance): Promise<bool
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), 4000);
 		const base = instance.url.replace(/\/$/, '');
-		const res = await fetch(`${base}/CzXTtJV.jpg`, {
+		const healthCheckUrl = new URL(`${base}/CzXTtJV.jpg`);
+		healthCheckUrl.searchParams.set('noimgur-health', Date.now().toString());
+		const res = await fetch(healthCheckUrl, {
 			method: 'HEAD',
+			// Instance images are often cached for a year. Reusing a cached 200 here
+			// can hide an instance that has since started returning errors.
+			cache: 'no-store',
 			// they wont be sent with real image requests and could include anubis tokens
 			// which let this health check succeed but not real redirected image requests
 			credentials: 'omit',

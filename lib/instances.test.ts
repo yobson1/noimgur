@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { API_FETCH_TIMEOUT_MS, API_URLS } from './constants';
 import bundledInstances from './instances.json';
-import { fetchInstancesWithSource } from './instances';
+import { checkInstanceHealth, fetchInstancesWithSource } from './instances';
 
 const remoteInstances = [
 	{
@@ -119,5 +119,36 @@ describe('fetchInstancesWithSource', () => {
 		expect(result.source).toBe('bundled');
 		expect(signals).toHaveLength(API_URLS.length);
 		expect(signals.every((signal) => signal.aborted)).toBe(true);
+	});
+});
+
+describe('checkInstanceHealth', () => {
+	it('bypasses cached successful responses when checking the current status', async () => {
+		vi.setSystemTime(new Date('2026-08-20T07:00:00Z'));
+		const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) =>
+			Promise.resolve(
+				init?.cache === 'no-store'
+					? new Response(null, { status: 500 })
+					: new Response(null, {
+							status: 200,
+							headers: { 'content-type': 'image/jpeg' }
+						})
+			)
+		);
+		vi.stubGlobal('fetch', fetchMock);
+
+		const healthy = await checkInstanceHealth(remoteInstances[0]!);
+
+		expect(healthy).toBe(false);
+		expect(fetchMock).toHaveBeenCalledOnce();
+		const [url, init] = fetchMock.mock.calls[0]!;
+		expect(url.toString()).toBe(
+			'https://remote.example/CzXTtJV.jpg?noimgur-health=1787209200000'
+		);
+		expect(init).toMatchObject({
+			method: 'HEAD',
+			cache: 'no-store',
+			credentials: 'omit'
+		});
 	});
 });
