@@ -18,7 +18,7 @@ jobs:
       - name: Check Edge API key expiry
         env:
           EDGE_API_KEY: ${{ secrets.EDGE_API_KEY }}
-          EDGE_API_KEY_EXPIRES: '2026-10-11'
+          EDGE_API_KEY_EXPIRES: '2027-03-02'
         run: |
           if [ -z "$EDGE_API_KEY" ]; then
             echo "::error::EDGE_API_KEY is not configured"
