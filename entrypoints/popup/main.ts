@@ -14,7 +14,7 @@ let instances: RimgoInstance[] = [];
 let prefs: StoredPrefs = {
 	blacklist: [],
 	privacyOnly: false,
-	healthySet: [],
+	healthySet: null,
 	autoRotate: true
 };
 let currentDomain = '';
@@ -51,7 +51,7 @@ async function boot() {
 		prefs = {
 			blacklist: (p.blacklist as string[]) ?? [],
 			privacyOnly: (p.privacyOnly as boolean) ?? false,
-			healthySet: (p.healthySet as string[]) ?? [],
+			healthySet: (p.healthySet as string[] | undefined) ?? null,
 			autoRotate: (p.autoRotate as boolean) ?? true
 		};
 	}
@@ -98,7 +98,8 @@ async function boot() {
 // ── Persist prefs ─────────────────────────────────────────────────────────────
 
 async function savePrefs() {
-	await browser.storage.local.set(prefs);
+	const { blacklist, privacyOnly, autoRotate } = prefs;
+	await browser.storage.local.set({ blacklist, privacyOnly, autoRotate });
 }
 
 // ── Countdown ─────────────────────────────────────────────────────────────────
@@ -133,13 +134,21 @@ function startCountdown() {
 async function triggerTask(btn: HTMLButtonElement, task: 'ROTATE_NOW' | 'RECHECK_NOW') {
 	btn.disabled = true;
 	try {
-		await browser.runtime.sendMessage({ type: task });
+		const response = (await browser.runtime.sendMessage({ type: task })) as { ok: boolean };
+		if (!response.ok) throw new Error('The background task failed');
+		btn.title = 'Re-check instance health';
 		const result = (await browser.storage.local.get([
-			'instanceDomain'
-		])) as Partial<StoredState>;
+			'instanceDomain',
+			'healthySet'
+		])) as Partial<StoredState & Pick<StoredPrefs, 'healthySet'>>;
 		if (result.instanceDomain) currentDomain = result.instanceDomain;
+		prefs.healthySet = result.healthySet ?? null;
 		renderInstanceList();
+		updateCount();
 		updateCurrentLabel();
+	} catch (err) {
+		console.error('[noimgur] Could not complete instance refresh:', err);
+		btn.title = 'Refresh failed. Try again';
 	} finally {
 		btn.disabled = false;
 	}
@@ -289,7 +298,8 @@ function updateCount() {
 	if (!el) return;
 
 	const total = instances.length;
-	const unhealthy = prefs.healthySet.length > 0 ? total - prefs.healthySet.length : 0;
+	const { healthySet } = prefs;
+	const unhealthy = healthySet ? instances.filter((i) => !healthySet.includes(i.domain)).length : 0;
 	const blacklisted = prefs.blacklist.length;
 	const unprivate = prefs.privacyOnly ? instances.filter((i) => !isPrivate(i)).length : 0;
 	const active = filterInstances(instances, prefs).length;
@@ -327,6 +337,11 @@ function renderInstanceList() {
 		return;
 	}
 
+	if (prefs.healthySet?.length === 0) {
+		container.innerHTML = '<div class="state-msg">No instances passed the image check</div>';
+		return;
+	}
+
 	container.innerHTML = '';
 
 	for (const instance of instances) {
@@ -336,7 +351,7 @@ function renderInstanceList() {
 		const isCurrent = instance.domain === currentDomain;
 		const isHiddenByPrivacyFilter = prefs.privacyOnly && !isPrivacySafe;
 		const isUnhealthy =
-			prefs.healthySet.length > 0 && !prefs.healthySet.includes(instance.domain);
+			prefs.healthySet !== null && !prefs.healthySet.includes(instance.domain);
 
 		const row = document.createElement('div');
 		row.className = [

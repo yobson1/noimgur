@@ -26,6 +26,6 @@ export interface StoredState {
 export interface StoredPrefs {
 	blacklist: string[]; // domains the user has manually unticked
 	privacyOnly: boolean; // only pick instances where note includes "Data not collected"
-	healthySet: string[]; // domains that passed the last health check
+	healthySet: string[] | null; // null until the first health check
 	autoRotate: boolean; // whether to rotate instance on alarm
 }

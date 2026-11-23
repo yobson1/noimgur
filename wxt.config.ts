@@ -10,11 +10,16 @@ export default defineConfig({
 	zip: {
 		excludeSources: ['gen-icons.sh', 'cws-patch.sh', 'media/screenshots/*', 'media/cws-icon/*']
 	},
-	manifest: {
+	manifest: ({ browser, manifestVersion }) => ({
 		name: 'noimgur',
 		description: 'Redirects imgur.com to rimgo proxy instances for users in blocked regions',
 		version: process.env.npm_package_version,
-		permissions: ['declarativeNetRequestWithHostAccess', 'storage', 'alarms'],
+		permissions: [
+			'declarativeNetRequestWithHostAccess',
+			'storage',
+			'alarms',
+			...(browser !== 'firefox' && manifestVersion === 3 ? ['offscreen'] as const : [])
+		],
 		host_permissions: ['<all_urls>'],
 		browser_specific_settings: {
 			gecko: {
@@ -25,5 +30,5 @@ export default defineConfig({
 				}
 			}
 		}
-	}
+	})
 });

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { API_FETCH_TIMEOUT_MS, API_URLS } from './constants';
 import bundledInstances from './instances.json';
-import { checkInstanceHealth, fetchInstancesWithSource } from './instances';
+import { applyInstance, fetchInstancesWithSource, filterInstances } from './instances';
 
 const remoteInstances = [
 	{
@@ -122,33 +122,41 @@ describe('fetchInstancesWithSource', () => {
 	});
 });
 
-describe('checkInstanceHealth', () => {
-	it('bypasses cached successful responses when checking the current status', async () => {
-		vi.setSystemTime(new Date('2026-08-20T07:00:00Z'));
-		const fetchMock = vi.fn((_url: string | URL | Request, init?: RequestInit) =>
-			Promise.resolve(
-				init?.cache === 'no-store'
-					? new Response(null, { status: 500 })
-					: new Response(null, {
-							status: 200,
-							headers: { 'content-type': 'image/jpeg' }
-						})
+describe('filterInstances', () => {
+	it('keeps all instances ineligible when a completed check finds none healthy', () => {
+		const prefs = { blacklist: [], privacyOnly: false, autoRotate: true };
+		expect(filterInstances(remoteInstances, { ...prefs, healthySet: [] })).toEqual([]);
+		expect(filterInstances(remoteInstances, { ...prefs, healthySet: null })).toEqual(remoteInstances);
+	});
+});
+
+describe('applyInstance', () => {
+	it('still redirects images and top-level pages when the instance denies framing', async () => {
+		const updateDynamicRules = vi.fn().mockResolvedValue(undefined);
+		vi.stubGlobal('browser', {
+			declarativeNetRequest: { updateDynamicRules },
+			storage: { local: { set: vi.fn().mockResolvedValue(undefined) } }
+		});
+		vi.stubGlobal(
+			'fetch',
+			vi.fn().mockResolvedValue(
+				new Response(null, {
+					headers: { 'content-type': 'image/jpeg', 'x-frame-options': 'SAMEORIGIN' }
+				})
 			)
 		);
-		vi.stubGlobal('fetch', fetchMock);
+		vi.spyOn(console, 'log').mockImplementation(() => {});
 
-		const healthy = await checkInstanceHealth(remoteInstances[0]!);
+		await applyInstance(remoteInstances[0]!);
 
-		expect(healthy).toBe(false);
-		expect(fetchMock).toHaveBeenCalledOnce();
-		const [url, init] = fetchMock.mock.calls[0]!;
-		expect(url.toString()).toBe(
-			'https://remote.example/CzXTtJV.jpg?noimgur-health=1787209200000'
+		expect(updateDynamicRules).toHaveBeenCalledWith(
+			expect.objectContaining({
+				addRules: [
+					expect.objectContaining({
+						condition: expect.objectContaining({ resourceTypes: ['main_frame', 'image'] })
+					})
+				]
+			})
 		);
-		expect(init).toMatchObject({
-			method: 'HEAD',
-			cache: 'no-store',
-			credentials: 'omit'
-		});
 	});
 });

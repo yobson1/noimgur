@@ -8,6 +8,8 @@ import {
 	PREFS_KEYS
 } from './constants';
 import { isPrivate } from './utils';
+import { healthImageUrl } from './image-health';
+import { probeInstanceImages } from './health-check';
 import bundledInstances from './instances.json';
 
 export type InstanceSource = (typeof API_URLS)[number] | 'bundled';
@@ -52,51 +54,56 @@ export async function fetchInstances(): Promise<RimgoInstance[]> {
 	return (await fetchInstancesWithSource()).instances;
 }
 
-export async function checkInstanceHealth(instance: RimgoInstance): Promise<boolean> {
+async function supportsCrossOriginFrames(base: string): Promise<boolean> {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 4000);
 	try {
-		const controller = new AbortController();
-		const timeout = setTimeout(() => controller.abort(), 4000);
-		const base = instance.url.replace(/\/$/, '');
-		const healthCheckUrl = new URL(`${base}/CzXTtJV.jpg`);
+		const healthCheckUrl = new URL(healthImageUrl(base));
 		healthCheckUrl.searchParams.set('noimgur-health', Date.now().toString());
 		const res = await fetch(healthCheckUrl, {
 			method: 'HEAD',
-			// Instance images are often cached for a year. Reusing a cached 200 here
-			// can hide an instance that has since started returning errors.
 			cache: 'no-store',
-			// they wont be sent with real image requests and could include anubis tokens
-			// which let this health check succeed but not real redirected image requests
 			credentials: 'omit',
 			signal: controller.signal
 		});
-		clearTimeout(timeout);
 		if (!res.ok) return false;
-		const x_frame_options = (res.headers.get('x-frame-options') ?? '').toUpperCase();
-		if (x_frame_options.includes('SAMEORIGIN') || x_frame_options.includes('DENY'))
-			return false;
+		const frameOptions = (res.headers.get('x-frame-options') ?? '').toUpperCase();
+		if (frameOptions.includes('SAMEORIGIN') || frameOptions.includes('DENY')) return false;
+		const csp = res.headers.get('content-security-policy') ?? '';
+		if (/(?:^|[;,])\s*frame-ancestors\s/i.test(csp)) return false;
 		const ct = res.headers.get('content-type') ?? '';
-		if (!ct.startsWith('image/') || ct.includes('text/html')) return false;
-		return true;
+		return ct.startsWith('image/');
 	} catch {
 		return false;
+	} finally {
+		clearTimeout(timeout);
 	}
 }
 
+let healthRefresh: Promise<string[]> | undefined;
+
 // Check all instances in parallel and persist the passing set to storage.
 // Called on install, startup, and before each periodic alarm rotation.
-export async function refreshHealthySet(instances: RimgoInstance[]): Promise<string[]> {
-	console.log(`[noimgur] Health checking ${instances.length} instances...`);
-	const results = await Promise.all(
-		instances.map(async (i) => ({ domain: i.domain, healthy: await checkInstanceHealth(i) }))
-	);
-	const healthySet = results.filter((r) => r.healthy).map((r) => r.domain);
-	await browser.storage.local.set({ healthySet });
-	console.log(`[noimgur] ${healthySet.length}/${instances.length} instances healthy`);
-	return healthySet;
+export function refreshHealthySet(instances: RimgoInstance[]): Promise<string[]> {
+	healthRefresh ??= (async () => {
+		console.log(`[noimgur] Health checking ${instances.length} instances...`);
+		const results = await probeInstanceImages(instances.map((i) => healthImageUrl(i.url)));
+		const healthySet = instances.filter((_, index) => results[index]).map((i) => i.domain);
+		await browser.storage.local.set({ healthySet });
+		console.log(`[noimgur] ${healthySet.length}/${instances.length} instances healthy`);
+		return healthySet;
+	})().finally(() => {
+		healthRefresh = undefined;
+	});
+	return healthRefresh;
 }
 
 export async function applyInstance(instance: RimgoInstance): Promise<void> {
 	const base = instance.url.replace(/\/$/, '');
+	const resourceTypes = ['main_frame', 'image'] as Browser.declarativeNetRequest.ResourceType[];
+	if (await supportsCrossOriginFrames(base)) {
+		resourceTypes.push('sub_frame' as Browser.declarativeNetRequest.ResourceType);
+	}
 
 	await browser.declarativeNetRequest.updateDynamicRules({
 		removeRuleIds: [RULE_ID],
@@ -112,11 +119,7 @@ export async function applyInstance(instance: RimgoInstance): Promise<void> {
 				},
 				condition: {
 					regexFilter: IMGUR_REGEX_CAPTURE,
-					resourceTypes: [
-						'main_frame',
-						'sub_frame',
-						'image'
-					] as Browser.declarativeNetRequest.ResourceType[]
+					resourceTypes
 				}
 			}
 		]
@@ -137,14 +140,14 @@ export async function getStoredPrefs(): Promise<StoredPrefs> {
 	return {
 		blacklist: (result.blacklist as string[]) ?? [],
 		privacyOnly: (result.privacyOnly as boolean) ?? false,
-		healthySet: (result.healthySet as string[]) ?? [],
+		healthySet: (result.healthySet as string[] | undefined) ?? null,
 		autoRotate: (result.autoRotate as boolean) ?? true
 	};
 }
 
 export function filterInstances(instances: RimgoInstance[], prefs: StoredPrefs): RimgoInstance[] {
 	return instances.filter((i) => {
-		if (prefs.healthySet.length > 0 && !prefs.healthySet.includes(i.domain)) return false;
+		if (prefs.healthySet && !prefs.healthySet.includes(i.domain)) return false;
 		if (prefs.blacklist.includes(i.domain)) return false;
 		if (prefs.privacyOnly && !isPrivate(i)) return false;
 		return true;

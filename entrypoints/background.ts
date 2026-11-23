@@ -9,6 +9,13 @@ import {
 import { ALARM_NAME, ROTATE_INTERVAL_MINUTES } from '../lib/constants';
 
 async function initAndBroadcast() {
+	const existing = await browser.alarms.get(ALARM_NAME);
+	if (!existing) {
+		await browser.alarms.create(ALARM_NAME, {
+			periodInMinutes: ROTATE_INTERVAL_MINUTES
+		});
+	}
+
 	const instances = await fetchInstances();
 	await refreshHealthySet(instances);
 
@@ -33,13 +40,6 @@ async function initAndBroadcast() {
 		if (tab.id) {
 			browser.tabs.sendMessage(tab.id, { type: 'NOIMGUR_INIT' }).catch(() => {});
 		}
-	}
-
-	const existing = await browser.alarms.get(ALARM_NAME);
-	if (!existing) {
-		await browser.alarms.create(ALARM_NAME, {
-			periodInMinutes: ROTATE_INTERVAL_MINUTES
-		});
 	}
 }
 
@@ -66,12 +66,15 @@ export default defineBackground(() => {
 				const instances = await fetchInstances();
 				const healthySet = await refreshHealthySet(instances);
 				const state = await getStoredState();
-				// Only rotate if the current instance failed the health check
-				if (state && !healthySet.includes(state.instanceDomain)) {
+				// Pick an instance if none is selected or the current one failed.
+				if (!state || !healthySet.includes(state.instanceDomain)) {
 					await rotateInstance();
 				}
 				sendResponse({ ok: true });
-			})();
+			})().catch((err) => {
+				console.error('[noimgur] Health check failed:', err);
+				sendResponse({ ok: false });
+			});
 			return true;
 		}
 		if (m.type === 'SET_INSTANCE' && m.domain) {
