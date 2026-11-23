@@ -18,6 +18,8 @@ export default defineConfig({
 			'declarativeNetRequestWithHostAccess',
 			'storage',
 			'alarms',
+			'webRequest',
+			...(browser === 'firefox' ? ['webRequestBlocking'] as const : []),
 			...(browser !== 'firefox' && manifestVersion === 3 ? ['offscreen'] as const : [])
 		],
 		host_permissions: ['<all_urls>'],

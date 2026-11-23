@@ -1,8 +1,73 @@
 import { IMAGE_HEALTH_DOCUMENT, IMAGE_HEALTH_MESSAGE, loadHealthImages } from './image-health';
+import { headerValue, isAnubisPage, isChallengeResponse } from './image-evidence';
 
 const PROBE_RULE_ID = 2;
 
-export async function probeInstanceImages(urls: string[]): Promise<boolean[]> {
+export type ProbeOutcome = 'healthy' | 'probe-blocked' | 'failed';
+
+async function hasChallengePage(url: string): Promise<boolean> {
+	const controller = new AbortController();
+	const timeout = setTimeout(() => controller.abort(), 3500);
+	try {
+		const response = await fetch(url, {
+			cache: 'no-store',
+			credentials: 'omit',
+			redirect: 'error',
+			signal: controller.signal
+		});
+		if (response.headers.get('cf-mitigated') === 'challenge') return true;
+		if (!response.headers.get('content-type')?.includes('text/html') || !response.body) return false;
+		const reader = response.body.getReader();
+		const decoder = new TextDecoder();
+		let html = '';
+		while (html.length < 32768) {
+			const { value, done } = await reader.read();
+			if (done) break;
+			html += decoder.decode(value.subarray(0, 32768 - html.length), { stream: true });
+			if (isAnubisPage(html)) return true;
+		}
+		return false;
+	} catch {
+		return false;
+	} finally {
+		clearTimeout(timeout);
+		controller.abort();
+	}
+}
+
+export async function probeInstanceImages(urls: string[]): Promise<ProbeOutcome[]> {
+	const targets = new Set(urls);
+	const challenged = new Set<string>();
+	const htmlResponses = new Set<string>();
+	const observe = ({ url, tabId, responseHeaders }: Browser.webRequest.OnHeadersReceivedDetails): undefined => {
+		const requestUrl = url.split('#', 1)[0]!;
+		if (tabId !== -1 || !targets.has(requestUrl)) return;
+		if (isChallengeResponse(responseHeaders)) challenged.add(requestUrl);
+		if (headerValue(responseHeaders, 'content-type').includes('text/html')) {
+			htmlResponses.add(requestUrl);
+		}
+		return undefined;
+	};
+
+	browser.webRequest.onHeadersReceived.addListener(observe, {
+		urls: ['http://*/*', 'https://*/*'],
+		types: ['image' as Browser.webRequest.ResourceType]
+	}, ['responseHeaders' as Browser.webRequest.OnHeadersReceivedOptions]);
+	try {
+		const results = await loadProbeImages(urls);
+		return await Promise.all(urls.map(async (url, index) => {
+			if (results[index]) return 'healthy';
+			if (challenged.has(url) || (htmlResponses.has(url) && await hasChallengePage(url))) {
+				return 'probe-blocked';
+			}
+			return 'failed';
+		}));
+	} finally {
+		browser.webRequest.onHeadersReceived.removeListener(observe);
+	}
+}
+
+async function loadProbeImages(urls: string[]): Promise<boolean[]> {
 	const { declarativeNetRequest, offscreen, runtime } = browser;
 	const { hostname } = new URL(runtime.getURL('/'));
 	// Use the normal image URL. Revalidate it and prevent the probe from storing

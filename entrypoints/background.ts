@@ -7,6 +7,8 @@ import {
 	getStoredPrefs
 } from '../lib/instances';
 import { ALARM_NAME, ROTATE_INTERVAL_MINUTES } from '../lib/constants';
+import { imageHealth } from '../lib/image-evidence';
+import { registerImageFailover } from '../lib/image-failover';
 
 async function initAndBroadcast() {
 	const existing = await browser.alarms.get(ALARM_NAME);
@@ -21,16 +23,16 @@ async function initAndBroadcast() {
 
 	const prefs = await getStoredPrefs();
 	if (prefs.autoRotate) {
-		await rotateInstance();
+		await rotateInstance(instances);
 	} else {
 		// Still need to re-apply the stored instance so DNR rules are in place
 		const state = await getStoredState();
 		if (state) {
 			const stored = instances.find((i) => i.domain === state.instanceDomain);
 			if (stored) await applyInstance(stored);
-			else await rotateInstance();
+			else await rotateInstance(instances);
 		} else {
-			await rotateInstance();
+			await rotateInstance(instances);
 		}
 	}
 
@@ -44,10 +46,14 @@ async function initAndBroadcast() {
 }
 
 export default defineBackground(() => {
+	registerImageFailover();
+
 	browser.runtime.onInstalled.addListener(async ({ reason }) => {
 		if (reason === 'install') {
 			console.log('[noimgur] Extension installed, checking instances...');
 			await initAndBroadcast();
+		} else if (reason === 'update') {
+			await refreshHealthySet(await fetchInstances());
 		}
 	});
 
@@ -64,11 +70,11 @@ export default defineBackground(() => {
 		if (m.type === 'RECHECK_NOW') {
 			(async () => {
 				const instances = await fetchInstances();
-				const healthySet = await refreshHealthySet(instances);
+				await refreshHealthySet(instances);
 				const state = await getStoredState();
 				// Pick an instance if none is selected or the current one failed.
-				if (!state || !healthySet.includes(state.instanceDomain)) {
-					await rotateInstance();
+				if (!state || imageHealth(state.instanceDomain, await getStoredPrefs()) === 'failed') {
+					await rotateInstance(instances);
 				}
 				sendResponse({ ok: true });
 			})().catch((err) => {
@@ -98,7 +104,7 @@ export default defineBackground(() => {
 			const prefs = await getStoredPrefs();
 			if (prefs.autoRotate) {
 				console.log('[noimgur] Auto-rotate enabled, rotating instance...');
-				await rotateInstance();
+				await rotateInstance(instances);
 			} else {
 				console.log('[noimgur] Auto-rotate disabled, skipping rotation.');
 			}

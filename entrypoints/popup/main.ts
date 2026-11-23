@@ -1,9 +1,10 @@
 import './style.css';
-import type { RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
-import { STATE_KEYS, PREFS_KEYS, ALARM_NAME } from '../../lib/constants';
+import type { ImageEvidence, RimgoInstance, StoredState, StoredPrefs } from '../../lib/types';
+import { STATE_KEYS, ALARM_NAME } from '../../lib/constants';
 import { isPrivate, collectsData, countryFlag } from '../../lib/utils';
 import type { InstanceSource } from '../../lib/instances';
-import { fetchInstancesWithSource, filterInstances } from '../../lib/instances';
+import { fetchInstancesWithSource, filterInstances, getStoredPrefs } from '../../lib/instances';
+import { imageHealth } from '../../lib/image-evidence';
 import refreshIconUrl from '@/assets/refresh.svg?url';
 
 const app = document.getElementById('app')!;
@@ -38,7 +39,7 @@ async function boot() {
 
 	const [stateResult, prefsResult, apiResult] = await Promise.allSettled([
 		browser.storage.local.get([...STATE_KEYS]) as Promise<StoredState>,
-		browser.storage.local.get([...PREFS_KEYS]),
+		getStoredPrefs(),
 		fetchInstancesWithSource()
 	]);
 
@@ -47,13 +48,7 @@ async function boot() {
 	}
 
 	if (prefsResult.status === 'fulfilled') {
-		const p = prefsResult.value as Record<string, unknown>;
-		prefs = {
-			blacklist: (p.blacklist as string[]) ?? [],
-			privacyOnly: (p.privacyOnly as boolean) ?? false,
-			healthySet: (p.healthySet as string[] | undefined) ?? null,
-			autoRotate: (p.autoRotate as boolean) ?? true
-		};
+		prefs = prefsResult.value;
 	}
 
 	if (apiResult.status === 'fulfilled') {
@@ -76,6 +71,14 @@ async function boot() {
 
 		if (changes.healthySet?.newValue) {
 			prefs.healthySet = changes.healthySet.newValue as string[];
+			dirty = true;
+		}
+		if (changes.probeBlocked) {
+			prefs.probeBlocked = (changes.probeBlocked.newValue as string[] | undefined) ?? [];
+			dirty = true;
+		}
+		if (changes.imageEvidence) {
+			prefs.imageEvidence = (changes.imageEvidence.newValue as ImageEvidence | undefined) ?? {};
 			dirty = true;
 		}
 		if (changes.instanceDomain?.newValue) {
@@ -120,10 +123,6 @@ function startCountdown() {
 	countdownInterval = setInterval(() => {
 		const el = document.getElementById('next-rotation');
 		if (!el) return;
-		if (!prefs.autoRotate) {
-			el.textContent = 'disabled';
-			return;
-		}
 		const remaining = nextAlarmMs - Date.now();
 		el.textContent = formatCountdown(remaining);
 	}, 1000);
@@ -137,12 +136,12 @@ async function triggerTask(btn: HTMLButtonElement, task: 'ROTATE_NOW' | 'RECHECK
 		const response = (await browser.runtime.sendMessage({ type: task })) as { ok: boolean };
 		if (!response.ok) throw new Error('The background task failed');
 		btn.title = 'Re-check instance health';
-		const result = (await browser.storage.local.get([
-			'instanceDomain',
-			'healthySet'
-		])) as Partial<StoredState & Pick<StoredPrefs, 'healthySet'>>;
+		const [result, updatedPrefs] = await Promise.all([
+			browser.storage.local.get('instanceDomain') as Promise<Partial<StoredState>>,
+			getStoredPrefs()
+		]);
 		if (result.instanceDomain) currentDomain = result.instanceDomain;
-		prefs.healthySet = result.healthySet ?? null;
+		prefs = updatedPrefs;
 		renderInstanceList();
 		updateCount();
 		updateCurrentLabel();
@@ -193,11 +192,26 @@ function renderShell() {
         <span class="list-header-text">Instances</span>
         <span class="list-source" id="list-source">checking remote lists…</span>
       </div>
-      <div class="list-count" id="list-count">—</div>
+      <div class="list-status">
+        <div class="list-count" id="list-count">—</div>
+        <button class="status-hint" id="status-hint" type="button" aria-label="Explain instance statuses"
+          aria-expanded="false" aria-controls="status-explanation">?</button>
+      </div>
+    </div>
+
+    <div class="status-explanation" id="status-explanation" hidden>
+      <dl>
+        <div><dt>Active</dt><dd>Eligible for regular rotation based on health and your settings.</dd></div>
+        <div><dt>Verified in use</dt><dd>Recently served an image through an actual redirect.</dd></div>
+        <div><dt>Probe blocked</dt><dd>Bot protection blocked the background check. The extension can still try this instance as a fallback.</dd></div>
+        <div><dt>Unhealthy</dt><dd>The image check failed or the instance recently failed during use.</dd></div>
+        <div><dt>Unprivate</dt><dd>Excluded when privacy-only mode is on.</dd></div>
+        <div><dt>Blacklisted</dt><dd>Disabled by you.</dd></div>
+      </dl>
     </div>
 
     <div class="rotation-row">
-      <span class="rotation-label">Next health check &amp; rotation</span>
+      <span class="rotation-label" id="rotation-label">Next health check &amp; rotation</span>
       <span class="rotation-countdown" id="next-rotation">—</span>
     </div>
 
@@ -207,6 +221,21 @@ function renderShell() {
       </div>
     </div>
   `;
+
+	const hint = document.getElementById('status-hint') as HTMLButtonElement;
+	const explanation = document.getElementById('status-explanation')!;
+	const showExplanation = (show: boolean) => {
+		explanation.hidden = !show;
+		hint.setAttribute('aria-expanded', String(show));
+	};
+	hint.addEventListener('click', () => showExplanation(explanation.hidden === true));
+	app.addEventListener('keydown', (event) => {
+		if (event.key === 'Escape' && !explanation.hidden) {
+			event.preventDefault();
+			showExplanation(false);
+			hint.focus();
+		}
+	});
 
 	document.getElementById('refresh-btn')!.addEventListener('click', (e) => {
 		triggerTask(e.currentTarget as HTMLButtonElement, 'RECHECK_NOW');
@@ -270,21 +299,16 @@ function updateInstanceSource() {
 }
 
 function updateRotationRow() {
-	const row = document.querySelector<HTMLDivElement>('.rotation-row')!;
+	const label = document.getElementById('rotation-label')!;
 	const countdown = document.getElementById('next-rotation')!;
-
-	if (!prefs.autoRotate) {
-		row.classList.add('rotation-row--disabled');
-		countdown.textContent = 'disabled';
-	} else {
-		row.classList.remove('rotation-row--disabled');
-		const remaining = nextAlarmMs - Date.now();
-		countdown.textContent = remaining > 0 ? formatCountdown(remaining) : '—';
-	}
+	label.textContent = prefs.autoRotate ? 'Next health check & rotation' : 'Next health check';
+	const remaining = nextAlarmMs - Date.now();
+	countdown.textContent = remaining > 0 ? formatCountdown(remaining) : '—';
 }
 
 function updateCurrentLabel() {
 	const el = document.getElementById('cur-instance')!;
+	el.title = 'Default instance. A tab can switch to another instance when an image request fails.';
 	if (currentDomain) {
 		el.textContent = currentDomain;
 		el.classList.add('loaded');
@@ -298,16 +322,18 @@ function updateCount() {
 	if (!el) return;
 
 	const total = instances.length;
-	const { healthySet } = prefs;
-	const unhealthy = healthySet ? instances.filter((i) => !healthySet.includes(i.domain)).length : 0;
+	const unhealthy = instances.filter((i) => imageHealth(i.domain, prefs) === 'failed').length;
+	const blocked = instances.filter((i) => imageHealth(i.domain, prefs) === 'probe-blocked').length;
 	const blacklisted = prefs.blacklist.length;
 	const unprivate = prefs.privacyOnly ? instances.filter((i) => !isPrivate(i)).length : 0;
-	const active = filterInstances(instances, prefs).length;
+	const active = filterInstances(instances, prefs)
+		.filter((i) => imageHealth(i.domain, prefs) !== 'probe-blocked').length;
 
 	const pills = [
 		unhealthy > 0
 			? `<span class="count-pill pill-unhealthy">${unhealthy} unhealthy</span>`
 			: '',
+		blocked > 0 ? `<span class="count-pill pill-unprivate">${blocked} probe blocked</span>` : '',
 		unprivate > 0
 			? `<span class="count-pill pill-unprivate">${unprivate} unprivate</span>`
 			: '',
@@ -337,7 +363,8 @@ function renderInstanceList() {
 		return;
 	}
 
-	if (prefs.healthySet?.length === 0) {
+	if (filterInstances(instances, prefs).length === 0 &&
+		!instances.some((i) => i.domain === currentDomain)) {
 		container.innerHTML = '<div class="state-msg">No instances passed the image check</div>';
 		return;
 	}
@@ -350,15 +377,15 @@ function renderInstanceList() {
 		const isDataCollected = collectsData(instance);
 		const isCurrent = instance.domain === currentDomain;
 		const isHiddenByPrivacyFilter = prefs.privacyOnly && !isPrivacySafe;
-		const isUnhealthy =
-			prefs.healthySet !== null && !prefs.healthySet.includes(instance.domain);
+		const status = imageHealth(instance.domain, prefs);
+		const isUnhealthy = status === 'failed';
 
 		const row = document.createElement('div');
 		row.className = [
 			'instance-row',
 			isCurrent ? 'active-row' : '',
 			isBlacklisted ? 'disabled-row' : '',
-			isHiddenByPrivacyFilter || isUnhealthy ? 'hidden-row' : ''
+			isHiddenByPrivacyFilter || (isUnhealthy && !isCurrent) ? 'hidden-row' : ''
 		]
 			.filter(Boolean)
 			.join(' ');
@@ -379,7 +406,10 @@ function renderInstanceList() {
       <div class="instance-info">
         <div class="instance-domain">
           <a href="${instance.url}" target="_blank" rel="noopener">${instance.domain}</a>
-          ${isCurrent ? '<span class="tag tag-current">active</span>' : ''}
+          ${isCurrent ? '<span class="tag tag-current">default</span>' : ''}
+          ${status === 'verified' ? '<span class="tag tag-privacy">Verified in use</span>' : ''}
+          ${status === 'probe-blocked' ? '<span class="tag tag-warn">Probe blocked</span>' : ''}
+          ${isUnhealthy ? '<span class="tag tag-danger">Unhealthy</span>' : ''}
           ${
 				isPrivacySafe
 					? '<span class="tag tag-privacy">no data</span>'

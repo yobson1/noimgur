@@ -131,6 +131,21 @@ describe('filterInstances', () => {
 });
 
 describe('applyInstance', () => {
+	it('leaves the default unchanged when a pending promotion becomes stale', async () => {
+		const updateDynamicRules = vi.fn();
+		const set = vi.fn();
+		vi.stubGlobal('browser', {
+			declarativeNetRequest: { updateDynamicRules },
+			storage: { local: { set } }
+		});
+		vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 403 })));
+
+		await applyInstance(remoteInstances[0]!, async () => false);
+
+		expect(updateDynamicRules).not.toHaveBeenCalled();
+		expect(set).not.toHaveBeenCalled();
+	});
+
 	it('still redirects images and top-level pages when the instance denies framing', async () => {
 		const updateDynamicRules = vi.fn().mockResolvedValue(undefined);
 		vi.stubGlobal('browser', {

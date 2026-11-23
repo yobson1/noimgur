@@ -27,5 +27,9 @@ export interface StoredPrefs {
 	blacklist: string[]; // domains the user has manually unticked
 	privacyOnly: boolean; // only pick instances where note includes "Data not collected"
 	healthySet: string[] | null; // null until the first health check
+	probeBlocked?: string[];
+	imageEvidence?: ImageEvidence;
 	autoRotate: boolean; // whether to rotate instance on alarm
 }
+
+export type ImageEvidence = Record<string, { ok: boolean; at: number }>;

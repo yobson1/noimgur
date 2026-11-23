@@ -238,6 +238,7 @@ html.fullscreen #app {
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
+	gap: 8px;
 	padding: 6px 12px 5px;
 	border-bottom: 1px solid var(--border);
 	flex-shrink: 0;
@@ -291,6 +292,61 @@ html.fullscreen #app {
 	flex-direction: column;
 	align-items: flex-end;
 	gap: 3px;
+}
+
+.list-status {
+	display: flex;
+	align-items: flex-end;
+	gap: 6px;
+}
+
+.status-hint {
+	display: grid;
+	place-items: center;
+	flex: 0 0 auto;
+	width: 18px;
+	height: 18px;
+	padding: 0;
+	border: 1px solid var(--border);
+	border-radius: 50%;
+	background: var(--bg-2);
+	color: var(--text-mid);
+	font: inherit;
+	font-size: 10px;
+	cursor: pointer;
+}
+
+.status-hint:hover,
+.status-hint:focus-visible,
+.status-hint[aria-expanded='true'] {
+	border-color: var(--accent-border);
+	color: var(--text);
+}
+
+.status-explanation {
+	flex-shrink: 0;
+	padding: 8px 12px;
+	border-bottom: 1px solid var(--border);
+	background: var(--bg-2);
+	font-size: 10px;
+	line-height: 1.4;
+}
+
+.status-explanation dl {
+	display: grid;
+	gap: 4px;
+	margin: 0;
+}
+
+.status-explanation dl > div {
+	display: grid;
+	grid-template-columns: 100px 1fr;
+	gap: 6px;
+}
+
+.status-explanation dd {
+	margin: 0;
+	color: var(--text-mid);
 }
 
 .count-active {

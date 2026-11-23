@@ -1,4 +1,4 @@
-import type { RimgoApiResponse, RimgoInstance, StoredState, StoredPrefs } from './types';
+import type { ImageEvidence, RimgoApiResponse, RimgoInstance, StoredState, StoredPrefs } from './types';
 import {
 	API_URLS,
 	API_FETCH_TIMEOUT_MS,
@@ -7,9 +7,9 @@ import {
 	STATE_KEYS,
 	PREFS_KEYS
 } from './constants';
-import { isPrivate } from './utils';
 import { healthImageUrl } from './image-health';
 import { probeInstanceImages } from './health-check';
+import { allowedInstance, imageHealth } from './image-evidence';
 import bundledInstances from './instances.json';
 
 export type InstanceSource = (typeof API_URLS)[number] | 'bundled';
@@ -88,8 +88,9 @@ export function refreshHealthySet(instances: RimgoInstance[]): Promise<string[]>
 	healthRefresh ??= (async () => {
 		console.log(`[noimgur] Health checking ${instances.length} instances...`);
 		const results = await probeInstanceImages(instances.map((i) => healthImageUrl(i.url)));
-		const healthySet = instances.filter((_, index) => results[index]).map((i) => i.domain);
-		await browser.storage.local.set({ healthySet });
+		const healthySet = instances.filter((_, index) => results[index] === 'healthy').map((i) => i.domain);
+		const probeBlocked = instances.filter((_, index) => results[index] === 'probe-blocked').map((i) => i.domain);
+		await browser.storage.local.set({ healthySet, probeBlocked, checkedInstances: instances });
 		console.log(`[noimgur] ${healthySet.length}/${instances.length} instances healthy`);
 		return healthySet;
 	})().finally(() => {
@@ -98,13 +99,31 @@ export function refreshHealthySet(instances: RimgoInstance[]): Promise<string[]>
 	return healthRefresh;
 }
 
-export async function applyInstance(instance: RimgoInstance): Promise<void> {
+let instanceCommit = Promise.resolve();
+
+export async function applyInstance(
+	instance: RimgoInstance,
+	canApply?: () => Promise<boolean>
+): Promise<void> {
 	const base = instance.url.replace(/\/$/, '');
 	const resourceTypes = ['main_frame', 'image'] as Browser.declarativeNetRequest.ResourceType[];
 	if (await supportsCrossOriginFrames(base)) {
 		resourceTypes.push('sub_frame' as Browser.declarativeNetRequest.ResourceType);
 	}
 
+	const commit = instanceCommit.then(async () => {
+		if (canApply && !(await canApply())) return;
+		await commitInstance(instance, base, resourceTypes);
+	});
+	instanceCommit = commit.catch(() => {});
+	await commit;
+}
+
+async function commitInstance(
+	instance: RimgoInstance,
+	base: string,
+	resourceTypes: Browser.declarativeNetRequest.ResourceType[]
+): Promise<void> {
 	await browser.declarativeNetRequest.updateDynamicRules({
 		removeRuleIds: [RULE_ID],
 		addRules: [
@@ -141,30 +160,38 @@ export async function getStoredPrefs(): Promise<StoredPrefs> {
 		blacklist: (result.blacklist as string[]) ?? [],
 		privacyOnly: (result.privacyOnly as boolean) ?? false,
 		healthySet: (result.healthySet as string[] | undefined) ?? null,
+		probeBlocked: (result.probeBlocked as string[] | undefined) ?? [],
+		imageEvidence: (result.imageEvidence as ImageEvidence | undefined) ?? {},
 		autoRotate: (result.autoRotate as boolean) ?? true
 	};
 }
 
 export function filterInstances(instances: RimgoInstance[], prefs: StoredPrefs): RimgoInstance[] {
 	return instances.filter((i) => {
-		if (prefs.healthySet && !prefs.healthySet.includes(i.domain)) return false;
-		if (prefs.blacklist.includes(i.domain)) return false;
-		if (prefs.privacyOnly && !isPrivate(i)) return false;
-		return true;
+		return allowedInstance(i, prefs) && imageHealth(i.domain, prefs) !== 'failed';
 	});
 }
 
 // trusts the persisted healthySet
-export async function rotateInstance(): Promise<void> {
+export async function rotateInstance(checkedInstances?: RimgoInstance[]): Promise<void> {
 	try {
 		const [instances, prefs, state] = await Promise.all([
-			fetchInstances(),
+			checkedInstances ?? fetchInstances(),
 			getStoredPrefs(),
 			getStoredState()
 		]);
-		const eligible = filterInstances(instances, prefs).filter(
+		const alternatives = filterInstances(instances, prefs).filter(
 			(i) => i.domain !== state?.instanceDomain
 		);
+		const confirmed = alternatives.filter((i) => {
+			const status = imageHealth(i.domain, prefs);
+			return status === 'verified' || status === 'healthy';
+		});
+		const current = state && instances.find((i) => i.domain === state.instanceDomain);
+		const currentStatus = current && allowedInstance(current, prefs) && imageHealth(current.domain, prefs);
+		const eligible = confirmed.length || currentStatus === 'verified' || currentStatus === 'healthy'
+			? confirmed
+			: alternatives;
 
 		if (eligible.length === 0) {
 			console.warn('[noimgur] No eligible instances to rotate to.');
